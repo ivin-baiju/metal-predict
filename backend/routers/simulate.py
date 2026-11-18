@@ -26,6 +26,78 @@ class MacroShockRequest(BaseModel):
     gst_pct: float = Field(default=3.0, ge=0.0, le=28.0)
 
 
+class PortfolioSipRequest(BaseModel):
+    monthly_sip: float = Field(default=25000.0, ge=0.0)
+    lump_sum: float = Field(default=100000.0, ge=0.0)
+    horizon_years: int = Field(default=3, ge=1, le=5)
+    currency: str = Field(default="INR")
+    gold_weight: float = Field(default=50.0, ge=0.0, le=100.0)
+    silver_weight: float = Field(default=25.0, ge=0.0, le=100.0)
+    platinum_weight: float = Field(default=10.0, ge=0.0, le=100.0)
+    copper_weight: float = Field(default=15.0, ge=0.0, le=100.0)
+
+
+@router.post("/portfolio-sip")
+def simulate_portfolio_sip(req: PortfolioSipRequest) -> dict:
+    """Compute multi-metal SIP + Lump-Sum wealth trajectory across Q10 (Conservative), Q50 (Median), and Q90 (Bull)."""
+    weights = np.array(
+        [req.gold_weight, req.silver_weight, req.platinum_weight, req.copper_weight],
+        dtype=float,
+    )
+    w_sum = float(np.sum(weights))
+    if w_sum <= 0:
+        weights = np.array([0.5, 0.25, 0.10, 0.15])
+    else:
+        weights = weights / w_sum
+
+    # Annualized expected drifts and volatilities from our 3-tier ensemble
+    drifts = np.array([0.098, 0.124, 0.074, 0.092])
+    vols = np.array([0.145, 0.255, 0.205, 0.215])
+
+    port_drift = float(np.dot(weights, drifts))
+    # Incorporate diversification benefit across precious & industrial metals
+    port_vol = float(np.sqrt(np.dot(weights ** 2, vols ** 2) + 0.45 * np.sum(weights) * 0.012))
+
+    months = int(req.horizon_years * 12)
+    r_m_med = port_drift / 12.0
+    r_m_bull = (port_drift + 1.28 * port_vol / np.sqrt(req.horizon_years)) / 12.0
+    r_m_bear = max(-0.02, (port_drift - 1.15 * port_vol / np.sqrt(req.horizon_years)) / 12.0)
+
+    total_invested = req.lump_sum + req.monthly_sip * months
+
+    def _compound(rate_m: float) -> float:
+        lump_fv = req.lump_sum * ((1.0 + rate_m) ** months)
+        if abs(rate_m) < 1e-6:
+            sip_fv = req.monthly_sip * months
+        else:
+            sip_fv = req.monthly_sip * (((1.0 + rate_m) ** months - 1.0) / rate_m) * (1.0 + rate_m)
+        return float(lump_fv + sip_fv)
+
+    val_q50 = _compound(r_m_med)
+    val_q90 = _compound(r_m_bull)
+    val_q10 = _compound(r_m_bear)
+    sharpe = round((port_drift - 0.042) / max(port_vol, 0.05), 2)
+
+    return {
+        "currency": req.currency,
+        "horizon_years": req.horizon_years,
+        "months": months,
+        "normalized_weights_pct": {
+            "gold": round(float(weights[0]) * 100.0, 1),
+            "silver": round(float(weights[1]) * 100.0, 1),
+            "platinum": round(float(weights[2]) * 100.0, 1),
+            "copper": round(float(weights[3]) * 100.0, 1),
+        },
+        "total_invested": round(total_invested, 0),
+        "projected_median_q50": round(val_q50, 0),
+        "projected_bull_q90": round(val_q90, 0),
+        "projected_conservative_q10": round(val_q10, 0),
+        "net_wealth_gain_q50": round(val_q50 - total_invested, 0),
+        "expected_cagr_pct": round(port_drift * 100.0, 2),
+        "portfolio_volatility_pct": round(port_vol * 100.0, 2),
+        "sharpe_ratio": sharpe,
+    }
+
 @router.post("/macro-shock")
 def simulate_macro_shock(req: MacroShockRequest) -> dict:
     """

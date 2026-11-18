@@ -16,7 +16,7 @@ PREDICTOR_HTML = STATIC_ROOT_DIR / "tools" / "metal-price-predictor.html"
 
 app = FastAPI(
     title="Metal Predict — Multi-Horizon Commodity Price Forecasting API",
-    version="2.1.0",
+    version="2.2.0",
     description="Three-Tier Quantile ML Ensemble (XGBoost + LightGBM/Basis + VECM/Monte Carlo) with TreeSHAP, FinBERT News Pulse, and COMEX-MCX Parity.",
 )
 
@@ -45,6 +45,9 @@ def health_check() -> dict:
 
 @app.get("/", include_in_schema=False)
 @app.get("/index.html", include_in_schema=False)
+@app.get("/about-us.html", include_in_schema=False)
+@app.get("/blog.html", include_in_schema=False)
+@app.get("/contact.html", include_in_schema=False)
 def serve_root_predictor() -> FileResponse:
     return FileResponse(str(PREDICTOR_HTML), media_type="text/html")
 

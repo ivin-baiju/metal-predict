@@ -1,9 +1,10 @@
 /**
- * Metal Predict — Multi-Horizon Metal Price Predictor & Commodity Desk Frontend Engine
- * Features:
- * - Washi-paper & sumi-ink startup preloader + in-place shimmer skeletons
- * - Animated high-DPI Canvas probability fan & walk-forward backtest charts with exact mouse crosshair math
- * - Debounced macro stress-tester sliders, rotating sakura hero words, custom follower cursor & parallax
+ * Metal Predict — Multi-Horizon Commodity Price Forecasting & Analytics Desk
+ * Self-contained frontend controller:
+ * - Slow, choreographed Washi-Paper Startup Preloader & Shimmer Skeletons
+ * - High-DPI Canvas Probability Fan & Walk-Forward Backtest Time Machine
+ * - Any-Day Precision Router, TreeSHAP Attribution, Macro/Duty Stress Lab
+ * - Multi-Metal SIP & Portfolio Wealth Simulator, Cross-Asset Correlation Matrix, 5-Hub Global Arbitrage
  */
 
 (function () {
@@ -24,8 +25,8 @@
     pulsePayload: null,
     backtestPayload: null,
     foldIndex: 0,
-    fanHover: null, // { type: 'hist'|'forecast', index: number, x: number }
-    backtestHover: null, // { index: number }
+    fanHover: null,
+    backtestHover: null,
     fanAnimProgress: 1.0,
     fanAnimFrame: null,
     btAnimProgress: 1.0,
@@ -37,6 +38,10 @@
 
   const TROY_OZ_TO_G = 31.1034768;
   const LB_TO_KG = 0.45359237;
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 
   function convertPrice(usdVal, metal = state.metal, mode = state.unitMode) {
     const v = Number(usdVal) || 0;
@@ -104,11 +109,14 @@
     );
   }
 
-  function setPreloaderStep(pct, label) {
+  function setPreloaderStep(stepIdx, pct, label) {
     const fill = document.getElementById("mpPreloaderFill");
     const status = document.getElementById("mpPreloaderStatus");
     if (fill) fill.style.width = `${pct}%`;
     if (status) status.textContent = label;
+    document.querySelectorAll(".mp-preloader__step").forEach((el, idx) => {
+      el.classList.toggle("is-active", idx <= stepIdx);
+    });
   }
 
   function toggleSkeletonState(isLoading) {
@@ -128,6 +136,19 @@
     return res.json();
   }
 
+  async function runChoreographedPreloader() {
+    setPreloaderStep(0, 24, "01 / 04 • Ingesting 15-Year DuckDB OHLCV & Macro Store...");
+    await sleep(650);
+    setPreloaderStep(1, 54, "02 / 04 • Calibrating Tier 1–2 XGBoost & LightGBM Quantiles...");
+    await sleep(650);
+    setPreloaderStep(2, 82, "03 / 04 • Simulating 1,000 VECM Jump-Diffusion Monte Carlo Paths...");
+    await sleep(650);
+    setPreloaderStep(3, 100, "04 / 04 • Extracting TreeSHAP & FinBERT Sentiment Pulse...");
+    await sleep(450);
+    const pre = document.getElementById("mpPreloader");
+    if (pre) pre.classList.add("is-dismissed");
+  }
+
   async function loadAllForMetal(metal) {
     state.metal = metal;
     state.stressedPayload = null;
@@ -135,23 +156,33 @@
     toggleSkeletonState(true);
 
     try {
-      if (!state.initialLoadDone) {
-        setPreloaderStep(38, "02 / 04 • Calibrating Tier 1–3 Quantile Ensembles...");
-      }
       const q = `metal=${encodeURIComponent(metal)}&usdinr=${state.usdinr}&bcd_pct=${state.bcdPct}&aidc_pct=${state.aidcPct}&gst_pct=${state.gstPct}`;
-      const [horizonsData, pulseData, backtestData] = await Promise.all([
+      const fetchPromise = Promise.all([
         fetchJson(`/api/predict/horizons?${q}`),
-        fetchJson(`/api/pulse/overview?metal=${encodeURIComponent(metal)}`),
+        fetchJson(`/api/pulse/overview?metal=${encodeURIComponent(metal)}&usdinr=${state.usdinr}`),
         fetchJson(`/api/backtest/replay?metal=${encodeURIComponent(metal)}&fold_index=${state.foldIndex}`),
       ]);
 
       if (!state.initialLoadDone) {
-        setPreloaderStep(78, "03 / 04 • Extracting TreeSHAP & FinBERT Sentiment...");
+        const [[horizonsData, pulseData, backtestData]] = await Promise.all([
+          fetchPromise,
+          runChoreographedPreloader(),
+        ]);
+        state.horizonPayload = horizonsData;
+        state.pulsePayload = pulseData;
+        state.backtestPayload = backtestData;
+        // Let the slow Washi-Paper Shimmer Skeleton remain visible on the page for 1.1s after the curtain lifts
+        await sleep(1100);
+        state.initialLoadDone = true;
+      } else {
+        const [[horizonsData, pulseData, backtestData]] = await Promise.all([
+          fetchPromise,
+          sleep(850), // Deliberate skeleton shimmer transition on metal switch
+        ]);
+        state.horizonPayload = horizonsData;
+        state.pulsePayload = pulseData;
+        state.backtestPayload = backtestData;
       }
-
-      state.horizonPayload = horizonsData;
-      state.pulsePayload = pulseData;
-      state.backtestPayload = backtestData;
 
       const dateInput = document.getElementById("kmTargetDateInput");
       if (dateInput && dateInput.value) {
@@ -166,28 +197,13 @@
       renderParityLedger();
       renderBacktestSection(true);
       renderPulseSection();
-
-      if (!state.initialLoadDone) {
-        setPreloaderStep(100, "04 / 04 • Metal Predict Desk Online");
-        state.initialLoadDone = true;
-        setTimeout(() => {
-          const pre = document.getElementById("mpPreloader");
-          if (pre) pre.classList.add("is-dismissed");
-        }, 280);
-      }
+      runPortfolioSipSimulation();
     } catch (err) {
       toggleSkeletonState(false);
       const pre = document.getElementById("mpPreloader");
       if (pre) pre.classList.add("is-dismissed");
       console.error("Failed loading Metal Predict telemetry:", err);
     }
-  }
-
-  function triggerStampFlash(el) {
-    if (!el) return;
-    el.classList.remove("is-stamping");
-    void el.offsetWidth;
-    el.classList.add("is-stamping");
   }
 
   function renderMetalTabs() {
@@ -199,7 +215,7 @@
         const active = item.metal === state.metal ? "is-active" : "";
         const chgSign = item.change_24h_pct >= 0 ? "+" : "";
         return `
-          <button type="button" class="km-metal-tab ${active}" data-metal="${item.metal}" data-cursor="SWITCH">
+          <button type="button" class="km-metal-tab ${active}" data-metal="${item.metal}">
             <span class="km-metal-tab__kanji" lang="ja">${item.kanji}</span>
             <span class="km-metal-tab__meta">
               <span class="km-metal-tab__name">${item.name} • ${item.symbol}</span>
@@ -213,7 +229,6 @@
     container.querySelectorAll(".km-metal-tab").forEach((btn) => {
       btn.addEventListener("click", () => {
         const m = btn.getAttribute("data-metal");
-        triggerStampFlash(btn);
         if (m && m !== state.metal) loadAllForMetal(m);
       });
     });
@@ -265,10 +280,10 @@
   function animateFanChartSweep() {
     if (state.fanAnimFrame) cancelAnimationFrame(state.fanAnimFrame);
     const start = performance.now();
-    const duration = 560;
+    const duration = 680;
     function step(now) {
       const t = Math.min(1.0, (now - start) / duration);
-      state.fanAnimProgress = 1 - Math.pow(1 - t, 3); // cubic ease-out
+      state.fanAnimProgress = 1 - Math.pow(1 - t, 3);
       drawFanCanvas();
       if (t < 1.0) {
         state.fanAnimFrame = requestAnimationFrame(step);
@@ -352,7 +367,7 @@
     const xOf = (idx) => pad.left + (idx / Math.max(totalPoints - 1, 1)) * plotW;
     const yOf = (val) => pad.top + (1 - (val - minP) / Math.max(maxP - minP, 1e-6)) * plotH;
 
-    // Horizontal grid lines & Y-axis labels
+    // Grid lines
     ctx.strokeStyle = "rgba(39, 39, 39, 0.11)";
     ctx.lineWidth = 1;
     ctx.font = "600 11px Kanit, sans-serif";
@@ -375,7 +390,7 @@
     const visibleForecastCount = Math.max(1, Math.round(activeSeries.length * state.fanAnimProgress));
     const visibleForecast = activeSeries.slice(0, visibleForecastCount);
 
-    // 95% Confidence Cone (Teal wash)
+    // 95% Confidence Cone
     ctx.beginPath();
     ctx.moveTo(splitX, yOf(convertPrice(histSlice[splitIdx].close)));
     visibleForecast.forEach((pt, i) => {
@@ -388,7 +403,7 @@
     ctx.fillStyle = "rgba(33, 70, 75, 0.12)";
     ctx.fill();
 
-    // 80% Confidence Cone (Sakura wash)
+    // 80% Confidence Cone
     ctx.beginPath();
     ctx.moveTo(splitX, yOf(convertPrice(histSlice[splitIdx].close)));
     visibleForecast.forEach((pt, i) => {
@@ -467,7 +482,7 @@
       ctx.restore();
     }
 
-    // Active Median Trajectory (Crimson stroke)
+    // Active Median Trajectory
     ctx.strokeStyle = "#d62828";
     ctx.lineWidth = 2.6;
     ctx.beginPath();
@@ -477,7 +492,7 @@
     });
     ctx.stroke();
 
-    // Terminal Forecast Beacon Dot
+    // Terminal Forecast Beacon
     const lastVisPt = visibleForecast[visibleForecast.length - 1];
     const termX = xOf(splitIdx + visibleForecast.length);
     const termY = yOf(convertPrice(lastVisPt.q50));
@@ -490,7 +505,7 @@
     ctx.arc(termX, termY, 4.2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Interactive Hover Crosshair + Data Nodes
+    // Interactive Crosshair
     const tooltip = document.getElementById("kmChartTooltip");
     if (state.fanHover) {
       const h = state.fanHover;
@@ -553,7 +568,6 @@
       `;
     }
 
-    // X-axis date labels
     ctx.fillStyle = "#4a4144";
     ctx.font = "400 11px Poppins, sans-serif";
     ctx.fillText(histSlice[0].date, pad.left, H - 10);
@@ -571,7 +585,10 @@
       const q = `metal=${encodeURIComponent(state.metal)}&target_date=${encodeURIComponent(
         targetDate
       )}&usdinr=${state.usdinr}&bcd_pct=${state.bcdPct}&aidc_pct=${state.aidcPct}&gst_pct=${state.gstPct}`;
-      const data = await fetchJson(`/api/predict/date?${q}`);
+      const [data] = await Promise.all([
+        fetchJson(`/api/predict/date?${q}`),
+        silent ? Promise.resolve() : sleep(650),
+      ]);
       state.anyDayPayload = data;
       if (box) box.classList.remove("mp-skeleton");
       renderAnyDayCard(data);
@@ -696,7 +713,7 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (seq !== state.stressSeq) return; // Ignore stale response
+    if (seq !== state.stressSeq) return;
     state.stressedPayload = sim;
 
     document.getElementById("kmStressBaseVal").textContent = formatCurrency(sim.baseline_terminal_q50);
@@ -758,10 +775,46 @@
     `;
   }
 
+  async function runPortfolioSipSimulation() {
+    const sipEl = document.getElementById("mpSipMonthly");
+    const lumpEl = document.getElementById("mpSipLumpSum");
+    const yrsEl = document.getElementById("mpSipYears");
+    const wGoldEl = document.getElementById("mpWeightGold");
+    const wSilverEl = document.getElementById("mpWeightSilver");
+    const wPlatEl = document.getElementById("mpWeightPlatinum");
+    const wCopEl = document.getElementById("mpWeightCopper");
+    if (!sipEl || !lumpEl) return;
+
+    const payload = {
+      monthly_sip: Number(sipEl.value) || 0,
+      lump_sum: Number(lumpEl.value) || 0,
+      horizon_years: Number(yrsEl.value) || 3,
+      currency: "INR",
+      gold_weight: Number(wGoldEl.value) || 50,
+      silver_weight: Number(wSilverEl.value) || 25,
+      platinum_weight: Number(wPlatEl.value) || 10,
+      copper_weight: Number(wCopEl.value) || 15,
+    };
+
+    try {
+      const res = await fetchJson("/api/simulate/portfolio-sip", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      document.getElementById("mpSipInvested").textContent = "₹" + Number(res.total_invested).toLocaleString("en-IN");
+      document.getElementById("mpSipQ50").textContent = "₹" + Number(res.projected_median_q50).toLocaleString("en-IN");
+      document.getElementById("mpSipQ90").textContent = "₹" + Number(res.projected_bull_q90).toLocaleString("en-IN");
+      document.getElementById("mpSipMetrics").textContent = `CAGR: ${res.expected_cagr_pct}% • Vol: ${res.portfolio_volatility_pct}% • Sharpe: ${res.sharpe_ratio}`;
+    } catch (e) {
+      console.error("SIP simulation error:", e);
+    }
+  }
+
   function animateBacktestSweep() {
     if (state.btAnimFrame) cancelAnimationFrame(state.btAnimFrame);
     const start = performance.now();
-    const duration = 500;
+    const duration = 560;
     function step(now) {
       const t = Math.min(1.0, (now - start) / duration);
       state.btAnimProgress = 1 - Math.pow(1 - t, 3);
@@ -782,7 +835,7 @@
         .map((f) => {
           const active = f.fold_index === bt.selected_fold_index ? "is-active" : "";
           return `
-            <button type="button" class="km-fold-btn ${active}" data-fold="${f.fold_index}" data-cursor="REPLAY">
+            <button type="button" class="km-fold-btn ${active}" data-fold="${f.fold_index}">
               <span class="km-fold-btn__title">${f.label}</span>
               <span class="km-fold-btn__meta">Anchor: ${f.anchor_date} (${formatCurrency(
             f.anchor_price
@@ -844,7 +897,6 @@
     const xOf = (i) => pad.left + (i / Math.max(total - 1, 1)) * plotW;
     const yOf = (v) => pad.top + (1 - (v - minP) / Math.max(maxP - minP, 1e-6)) * plotH;
 
-    // Grid lines
     ctx.strokeStyle = "rgba(39, 39, 39, 0.11)";
     ctx.lineWidth = 1;
     ctx.font = "600 11px Kanit, sans-serif";
@@ -889,7 +941,7 @@
     });
     ctx.stroke();
 
-    // Realized Actual Future Curve (Teal solid)
+    // Realized Actual Future Curve
     ctx.strokeStyle = "#21464b";
     ctx.lineWidth = 2.4;
     ctx.beginPath();
@@ -897,7 +949,7 @@
     visPreds.forEach((p, i) => ctx.lineTo(xOf(splitIdx + 1 + i), yOf(convertPrice(p.actual))));
     ctx.stroke();
 
-    // Model Out-of-Sample Predicted Median (Crimson dashed)
+    // Out-of-Sample Predicted Median
     ctx.save();
     ctx.setLineDash([5, 4]);
     ctx.strokeStyle = "#d62828";
@@ -912,7 +964,6 @@
     ctx.font = "600 11px Kanit, sans-serif";
     ctx.fillText(`WALK-FORWARD CUTOFF: ${bt.anchor_date}`, Math.max(16, splitX - 70), pad.top - 8);
 
-    // Date labels
     ctx.fillStyle = "#4a4144";
     ctx.font = "400 11px Poppins, sans-serif";
     ctx.fillText(before[0].date, pad.left, H - 8);
@@ -920,7 +971,6 @@
       ctx.fillText(preds[preds.length - 1].date, W - pad.right - 72, H - 8);
     }
 
-    // Backtest Hover Crosshair
     if (state.backtestHover && preds[state.backtestHover.index]) {
       const pIdx = state.backtestHover.index;
       const pt = preds[pIdx];
@@ -936,15 +986,15 @@
 
       const errPct = (((pt.q50 - pt.actual) / Math.max(pt.actual, 1e-6)) * 100).toFixed(2);
       ctx.fillStyle = "rgba(255,255,255,0.94)";
-      ctx.fillRect(pad.left + 8, pad.top + 6, 265, 52);
+      ctx.fillRect(pad.left + 8, pad.top + 6, 280, 52);
       ctx.strokeStyle = "#202020";
-      ctx.strokeRect(pad.left + 8, pad.top + 6, 265, 52);
+      ctx.strokeRect(pad.left + 8, pad.top + 6, 280, 52);
       ctx.fillStyle = "#202020";
       ctx.font = "600 11px Kanit, sans-serif";
       ctx.fillText(`Replay Date: ${pt.date} (+${pt.days_ahead}D)`, pad.left + 16, pad.top + 22);
       ctx.font = "400 11px Poppins, sans-serif";
       ctx.fillText(
-        `Predicted: ${formatCurrency(pt.q50)} vs Actual: ${formatCurrency(pt.actual)} (${errPct}%)`,
+        `Pred: ${formatCurrency(pt.q50)} vs Actual: ${formatCurrency(pt.actual)} (${errPct}%)`,
         pad.left + 16,
         pad.top + 42
       );
@@ -953,7 +1003,7 @@
 
   function renderPulseSection() {
     if (!state.pulsePayload) return;
-    const { gsr_radar, physical_squeeze, central_bank_tracker, news } = state.pulsePayload;
+    const { gsr_radar, physical_squeeze, central_bank_tracker, correlations, arbitrage_hubs, news } = state.pulsePayload;
 
     document.getElementById("kmGsrVal").textContent = `${gsr_radar.current_gsr}x`;
     document.getElementById("kmGsrMarker").style.left = `${gsr_radar.percentile_15y}%`;
@@ -965,6 +1015,43 @@
 
     document.getElementById("kmCbVal").textContent = `${central_bank_tracker.monthly_net_purchases_tonnes} Tonnes/Mo`;
     document.getElementById("kmCbDesc").textContent = `US Debt/GDP: ${central_bank_tracker.us_debt_to_gdp_pct}% • Buyers: ${central_bank_tracker.top_accumulators.slice(0, 3).join(", ")}`;
+
+    // Render Cross-Asset Correlations
+    const corrEl = document.getElementById("kmCorrList");
+    if (corrEl && correlations) {
+      corrEl.innerHTML = correlations
+        .map((c) => {
+          const isPos = c.long_1y >= 0;
+          const sign = isPos ? "+" : "";
+          return `
+            <div class="mp-corr-row">
+              <strong>${c.asset}</strong>
+              <span class="${isPos ? "km-badge-pos" : "km-badge-neg"}">30D: ${c.short_30d >= 0 ? "+" : ""}${
+            c.short_30d
+          } | 1Y: ${sign}${c.long_1y}</span>
+              <span style="color: var(--ink-soft);">${c.regime}</span>
+            </div>
+          `;
+        })
+        .join("");
+    }
+
+    // Render 5-Hub Global Bullion Arbitrage Table
+    const arbBody = document.getElementById("kmArbBody");
+    if (arbBody && arbitrage_hubs) {
+      arbBody.innerHTML = arbitrage_hubs
+        .map(
+          (row) => `
+          <tr>
+            <td><strong>${row.hub}</strong><br/><span style="font-size:0.72rem;color:var(--ink-soft);">${row.contract}</span></td>
+            <td style="font-family:Kanit,sans-serif;font-weight:600;">${row.quote}</td>
+            <td>${row.spread_vs_spot}</td>
+            <td style="font-size:0.75rem;color:var(--ink-soft);">${row.status}</td>
+          </tr>
+        `
+        )
+        .join("");
+    }
 
     const newsGrid = document.getElementById("kmNewsGrid");
     if (newsGrid && news) {
@@ -988,24 +1075,34 @@
   }
 
   function initThemeAnimations() {
-    // 1. Rotating Hero Sakura Word
+    // 1. Rotating Hero Sakura Word (Never clips or disappears)
     const words = ["forecasts", "quantiles", "regimes", "parity", "conviction"];
     let wIdx = 0;
     const rotEl = document.getElementById("mpRotatingHeroWord");
     if (rotEl) {
       setInterval(() => {
-        rotEl.classList.remove("is-in");
-        rotEl.classList.add("is-out");
+        rotEl.classList.add("is-switching");
         setTimeout(() => {
           wIdx = (wIdx + 1) % words.length;
           rotEl.textContent = words[wIdx];
-          rotEl.classList.remove("is-out");
-          rotEl.classList.add("is-in");
-        }, 420);
-      }, 2800);
+          rotEl.classList.remove("is-switching");
+        }, 280);
+      }, 3000);
     }
 
-    // 2. Scroll-Triggered Reveal & Parallax + Paper Scrollbar
+    // 2. Two-Frame Animated Ukiyo-e Dancer (from Design Source)
+    const pose1 = document.getElementById("mpDancerPose1");
+    const pose2 = document.getElementById("mpDancerPose2");
+    if (pose1 && pose2) {
+      let showFirst = true;
+      setInterval(() => {
+        showFirst = !showFirst;
+        pose1.style.opacity = showFirst ? "1" : "0";
+        pose2.style.opacity = showFirst ? "0" : "1";
+      }, 950);
+    }
+
+    // 3. Scroll-Triggered Reveal & Parallax + Paper Scrollbar
     const revealEls = document.querySelectorAll("[data-mp-reveal]");
     if ("IntersectionObserver" in window) {
       const io = new IntersectionObserver(
@@ -1016,7 +1113,7 @@
             }
           });
         },
-        { threshold: 0.1 }
+        { threshold: 0.08 }
       );
       revealEls.forEach((el) => io.observe(el));
     } else {
@@ -1033,45 +1130,38 @@
         if (thumb) {
           thumb.style.top = `${pct * 74}%`;
         }
-        document.documentElement.style.setProperty("--mp-parallax-y", `${scrollY * 0.12}px`);
+        document.documentElement.style.setProperty("--mp-parallax-y", `${scrollY * 0.1}px`);
       },
       { passive: true }
     );
 
-    // 3. Custom Glassmorphic Follower Cursor
-    const cursor = document.getElementById("mpCustomCursor");
-    const cursorLabel = document.getElementById("mpCustomCursorLabel");
-    if (cursor) {
-      window.addEventListener(
-        "mousemove",
-        (e) => {
-          cursor.style.transform = `translate3d(${e.clientX - cursor.offsetWidth / 2}px, ${
-            e.clientY - cursor.offsetHeight / 2
-          }px, 0)`;
-          const target = e.target.closest("[data-cursor], button, a, input, canvas");
-          if (target) {
-            cursor.classList.add("is-active");
-            const lbl =
-              target.getAttribute("data-cursor") ||
-              (target.tagName === "CANVAS" ? "CROSSHAIR" : "SELECT");
-            if (cursorLabel) cursorLabel.textContent = lbl;
-          } else {
-            cursor.classList.remove("is-active");
-            if (cursorLabel) cursorLabel.textContent = "";
-          }
-        },
-        { passive: true }
-      );
-    }
+    // 4. Chamfered Floral FAQ / Methodology Accordion
+    document.querySelectorAll(".mp-faq-q").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const item = btn.closest(".mp-faq-item");
+        if (!item) return;
+        const isOpen = item.classList.contains("is-open");
+        document.querySelectorAll(".mp-faq-item").forEach((el) => el.classList.remove("is-open"));
+        if (!isOpen) item.classList.add("is-open");
+      });
+    });
   }
 
   function bindEvents() {
+    const skipBtn = document.getElementById("mpSkipPreloaderBtn");
+    if (skipBtn) {
+      skipBtn.addEventListener("click", () => {
+        const pre = document.getElementById("mpPreloader");
+        if (pre) pre.classList.add("is-dismissed");
+        toggleSkeletonState(false);
+      });
+    }
+
     // Horizon switcher
     document.querySelectorAll(".km-horizon-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         document.querySelectorAll(".km-horizon-btn").forEach((b) => b.classList.remove("is-active"));
         btn.classList.add("is-active");
-        triggerStampFlash(btn);
         state.horizon = btn.getAttribute("data-horizon") || "1M";
         state.fanHover = null;
         if (state.stressedPayload) {
@@ -1101,13 +1191,10 @@
     const dateBtn = document.getElementById("kmAnyDayBtn");
     const dateInput = document.getElementById("kmTargetDateInput");
     if (dateBtn && dateInput) {
-      dateBtn.addEventListener("click", () => {
-        triggerStampFlash(dateBtn);
-        runAnyDayPrediction(dateInput.value);
-      });
+      dateBtn.addEventListener("click", () => runAnyDayPrediction(dateInput.value));
       dateInput.addEventListener("change", () => runAnyDayPrediction(dateInput.value));
     }
-    document.querySelectorAll(".km-preset-chip").forEach((chip) => {
+    document.querySelectorAll(".km-preset-chip[data-date]").forEach((chip) => {
       chip.addEventListener("click", () => {
         const dt = chip.getAttribute("data-date");
         if (dt && dateInput) {
@@ -1165,7 +1252,25 @@
       });
     }
 
-    // Main Fan Chart Crosshair (Accurate Global -> Historical/Forecast Index Math)
+    // Portfolio SIP Simulator bindings
+    ["mpSipMonthly", "mpSipLumpSum", "mpSipYears", "mpWeightGold", "mpWeightSilver", "mpWeightPlatinum", "mpWeightCopper"].forEach(
+      (id) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener("input", () => runPortfolioSipSimulation());
+      }
+    );
+    document.querySelectorAll("[data-sip-preset]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const [g, s, p, c] = (btn.getAttribute("data-sip-preset") || "50,25,10,15").split(",").map(Number);
+        document.getElementById("mpWeightGold").value = g;
+        document.getElementById("mpWeightSilver").value = s;
+        document.getElementById("mpWeightPlatinum").value = p;
+        document.getElementById("mpWeightCopper").value = c;
+        runPortfolioSipSimulation();
+      });
+    });
+
+    // Main Fan Chart Crosshair
     const fanCanvas = document.getElementById("kmFanChart");
     if (fanCanvas) {
       fanCanvas.addEventListener("mousemove", (e) => {

@@ -68,6 +68,25 @@ def test_backtest_replay_and_pulse_overview():
     assert r_pulse.status_code == 200
     p = r_pulse.json()
     assert "gsr_radar" in p and "physical_squeeze" in p and "news" in p
+    assert len(p["correlations"]) >= 6
+    assert len(p["arbitrage_hubs"]) == 5
+
+    r_sip = client.post(
+        "/api/simulate/portfolio-sip",
+        json={
+            "monthly_sip": 25000,
+            "lump_sum": 100000,
+            "horizon_years": 3,
+            "currency": "INR",
+            "gold_weight": 50,
+            "silver_weight": 25,
+            "platinum_weight": 10,
+            "copper_weight": 15,
+        },
+    )
+    assert r_sip.status_code == 200
+    sip_body = r_sip.json()
+    assert sip_body["projected_conservative_q10"] < sip_body["projected_median_q50"] < sip_body["projected_bull_q90"]
 
 
 def test_metal_predict_branding_skeleton_and_no_kigo():
