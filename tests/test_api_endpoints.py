@@ -113,3 +113,31 @@ def test_metal_predict_branding_skeleton_and_no_kigo():
     assert "Metal Predict" in r_hub.text
     assert "metal-price-predictor.html" in r_hub.text
     assert re.search(r"kigo", r_hub.text, re.IGNORECASE) is None
+
+
+def test_ai_chatbot_multilingual_and_live_clock():
+    # Verify EN, JA, and HI chatbot responses across intents
+    for lang, msg in [
+        ("en", "What is the 1Y forecast for Gold?"),
+        ("ja", "金 (ゴールド) のMCXパリティ価格を教えて"),
+        ("hi", "चांदी (Silver) की कीमत क्यों बढ़ रही है? SHAP बताएं"),
+        ("en", "Predict Gold price on 2027-10-29"),
+    ]:
+        r_chat = client.post(
+            "/api/chat/ask",
+            json={"message": msg, "metal": "gold", "horizon": "1M", "lang": lang, "usdinr": 86.48},
+        )
+        assert r_chat.status_code == 200
+        body = r_chat.json()
+        assert body["lang"] == lang
+        assert len(body["answer"]) > 30
+        assert "telemetry" in body
+
+    # Verify Live Clock, Language Switcher, Bespoke Logo & AI Chatbot exist in HTML
+    r_page = client.get("/")
+    html = r_page.text
+    assert 'id="mpLiveClock"' in html
+    assert 'data-lang="ja"' in html
+    assert 'data-lang="hi"' in html
+    assert 'id="mpChatbotWidget"' in html
+    assert "QUANTITATIVE BULLION AI" in html
