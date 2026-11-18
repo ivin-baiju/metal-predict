@@ -9,26 +9,20 @@ import os
 
 try:
     import spaces
+    from spaces.zero import client as _zg_client
 
     @spaces.GPU
     def _metal_predict_gpu_accelerator() -> str:
         return "Metal Predict Multi-Horizon Ensemble Active"
-except Exception:
-    spaces = None  # type: ignore
+
+    if os.getenv("SPACES_ZERO_GPU"):
+        _zg_client.startup_report()
+except Exception as _zg_err:
+    print("[Metal Predict] ZeroGPU startup note:", _zg_err, flush=True)
 
 import uvicorn
 from data_pipeline.ingest_market_data import DEFAULT_DB_PATH, ingest_all_market_data
 from backend.main import app
-
-try:
-    from spaces.zero.gradio import setup_middleware
-    from spaces.zero.lifecycle import zerogpu_mode_enabled, zerogpu_startup
-
-    setup_middleware(app)
-    if zerogpu_mode_enabled():
-        zerogpu_startup()
-except Exception:
-    pass
 
 if __name__ == "__main__":
     if not os.path.exists(DEFAULT_DB_PATH):
