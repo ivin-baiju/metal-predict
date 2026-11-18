@@ -8,8 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from backend.cache import get_suite
+from backend.cache import get_suite, reload_suite_cache
 from backend.routers import forecast, pulse, simulate
+from scripts.nightly_refresh import get_refresh_status, run_nightly_market_refresh
 
 STATIC_ROOT_DIR = Path(__file__).resolve().parent.parent / "kigo.studio"
 PREDICTOR_HTML = STATIC_ROOT_DIR / "tools" / "metal-price-predictor.html"
@@ -40,6 +41,32 @@ def health_check() -> dict:
         "status": "ok",
         "engine": "Metal Predict Multi-Horizon Hybrid Ensemble",
         "metals_loaded": list(suite.latest_rows.keys()),
+        "refresh_status": get_refresh_status(),
+    }
+
+
+@app.get("/api/refresh/status")
+def refresh_status_endpoint() -> dict:
+    """Return latest nightly market data & model refresh telemetry."""
+    return get_refresh_status()
+
+
+@app.post("/api/refresh/trigger")
+def trigger_refresh_endpoint(retrain: bool = False) -> dict:
+    """
+    Trigger a safe, zero-downtime market data & model cache refresh.
+    - When `retrain=True`, runs full DuckDB ingestion + 3-Tier Walk-Forward retraining in a staging directory before swapping.
+    - When `retrain=False` (default fast reload), hot-reloads the latest `multi_horizon_suite.joblib` from disk into memory.
+    """
+    if retrain:
+        status = run_nightly_market_refresh()
+    else:
+        status = get_refresh_status()
+    reload_suite_cache()
+    return {
+        "reloaded_in_memory": True,
+        "retrained_models": retrain,
+        **status,
     }
 
 

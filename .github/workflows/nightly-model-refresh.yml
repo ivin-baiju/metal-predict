@@ -1,0 +1,55 @@
+name: Metal Predict — Nightly Market Data & Multi-Horizon Model Refresh
+
+on:
+  schedule:
+    # Runs at 18:30 UTC (00:00 IST Tue–Sat) after global COMEX / LBMA / MCX daily settlement
+    - cron: "30 18 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Optional note for manual market/model refresh"
+        required: false
+        default: "Manual multi-horizon refresh"
+
+permissions:
+  contents: write
+
+jobs:
+  refresh-and-validate:
+    name: Ingest Latest Close, Train 3-Tier Ensemble & Verify Quantiles
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install OpenMP runtime for XGBoost & LightGBM
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgomp1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Atomic Nightly Market Data & Model Refresh
+        run: PYTHONPATH=. python scripts/nightly_refresh.py
+
+      - name: Run Pytest Quantile Monotonicity & API Verification Suite
+        run: PYTHONPATH=. pytest -v
+
+      - name: Commit & Push Updated DuckDB Store & Model Registry
+        run: |
+          git config user.name "Metal Predict Nightly Bot"
+          git config user.email "bot@metalpredict.ai"
+          git add data_pipeline/metal_alpha.duckdb ml_engine/registry/multi_horizon_suite.joblib ml_engine/registry/evaluation_report.json ml_engine/registry/refresh_status.json
+          if git diff --cached --quiet; then
+            echo "No changes to market store or model registry."
+          else
+            git commit -m "chore(nightly-refresh): update DuckDB market close & 3-tier model registry [skip ci]"
+            git push
+          fi

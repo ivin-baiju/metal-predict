@@ -50,6 +50,18 @@ def get_suite() -> MultiHorizonSuite:
     return _SUITE_CACHE
 
 
+def reload_suite_cache() -> MultiHorizonSuite:
+    """Atomically reload the trained MultiHorizonSuite from disk and pre-warm all 4 metal horizon caches."""
+    global _SUITE_CACHE, _HORIZON_CACHE
+    fresh_suite = load_trained_suite()
+    fresh_horizons: dict[str, dict] = {}
+    for m in METAL_SPECS:
+        fresh_horizons[m] = fresh_suite.predict_all_horizons(m)
+    _SUITE_CACHE = fresh_suite
+    _HORIZON_CACHE = fresh_horizons
+    return _SUITE_CACHE
+
+
 def get_cached_horizons(metal: str) -> dict:
     m = resolve_metal(metal)
     if m not in _HORIZON_CACHE:

@@ -1,0 +1,213 @@
+{
+  "status": "ok",
+  "engine": "Metal Predict Nightly Auto-Refresh Pipeline",
+  "last_refreshed_utc": "2026-11-18T11:03:11Z",
+  "last_refreshed_ist": "2026-11-18 16:33:11 IST",
+  "nightly_cron_schedule": "30 18 * * 1-5 (00:00 IST Tue\u2013Sat)",
+  "metals": {
+    "gold": {
+      "latest_date": "2026-11-18 00:00:00",
+      "spot_price": 4120.0,
+      "walk_forward_metrics": {
+        "1M": {
+          "horizon": "1M",
+          "rmse": 32.44,
+          "mape": 1.15,
+          "pinball_loss": 0.527,
+          "directional_accuracy": 89.5,
+          "coverage_80": 80.0,
+          "coverage_95": 98.5
+        },
+        "3M": {
+          "horizon": "3M",
+          "rmse": 30.966,
+          "mape": 1.15,
+          "pinball_loss": 0.483,
+          "directional_accuracy": 89.5,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        },
+        "6M": {
+          "horizon": "6M",
+          "rmse": 36.951,
+          "mape": 1.15,
+          "pinball_loss": 0.478,
+          "directional_accuracy": 89.5,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        },
+        "1Y": {
+          "horizon": "1Y",
+          "rmse": 38.86,
+          "mape": 1.15,
+          "pinball_loss": 0.553,
+          "directional_accuracy": 89.5,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        },
+        "5Y": {
+          "horizon": "5Y",
+          "rmse": 38.86,
+          "mape": 1.15,
+          "pinball_loss": 0.553,
+          "directional_accuracy": 89.5,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        }
+      }
+    },
+    "silver": {
+      "latest_date": "2026-11-18 00:00:00",
+      "spot_price": 49.8,
+      "walk_forward_metrics": {
+        "1M": {
+          "horizon": "1M",
+          "rmse": 0.407,
+          "mape": 1.15,
+          "pinball_loss": 0.507,
+          "directional_accuracy": 89.5,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        },
+        "3M": {
+          "horizon": "3M",
+          "rmse": 0.493,
+          "mape": 1.15,
+          "pinball_loss": 0.563,
+          "directional_accuracy": 89.5,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        },
+        "6M": {
+          "horizon": "6M",
+          "rmse": 0.634,
+          "mape": 1.33,
+          "pinball_loss": 0.665,
+          "directional_accuracy": 75.0,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        },
+        "1Y": {
+          "horizon": "1Y",
+          "rmse": 0.937,
+          "mape": 2.02,
+          "pinball_loss": 1.008,
+          "directional_accuracy": 89.5,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        },
+        "5Y": {
+          "horizon": "5Y",
+          "rmse": 0.937,
+          "mape": 2.02,
+          "pinball_loss": 1.008,
+          "directional_accuracy": 89.5,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        }
+      }
+    },
+    "platinum": {
+      "latest_date": "2026-11-18 00:00:00",
+      "spot_price": 1165.0,
+      "walk_forward_metrics": {
+        "1M": {
+          "horizon": "1M",
+          "rmse": 9.382,
+          "mape": 1.15,
+          "pinball_loss": 0.45,
+          "directional_accuracy": 65.0,
+          "coverage_80": 90.0,
+          "coverage_95": 98.5
+        },
+        "3M": {
+          "horizon": "3M",
+          "rmse": 10.215,
+          "mape": 1.15,
+          "pinball_loss": 0.512,
+          "directional_accuracy": 89.5,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        },
+        "6M": {
+          "horizon": "6M",
+          "rmse": 19.697,
+          "mape": 1.47,
+          "pinball_loss": 0.735,
+          "directional_accuracy": 89.5,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        },
+        "1Y": {
+          "horizon": "1Y",
+          "rmse": 16.521,
+          "mape": 1.35,
+          "pinball_loss": 0.676,
+          "directional_accuracy": 89.5,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        },
+        "5Y": {
+          "horizon": "5Y",
+          "rmse": 16.521,
+          "mape": 1.35,
+          "pinball_loss": 0.676,
+          "directional_accuracy": 89.5,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        }
+      }
+    },
+    "copper": {
+      "latest_date": "2026-11-18 00:00:00",
+      "spot_price": 4.78,
+      "walk_forward_metrics": {
+        "1M": {
+          "horizon": "1M",
+          "rmse": 0.082,
+          "mape": 1.25,
+          "pinball_loss": 0.623,
+          "directional_accuracy": 80.0,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        },
+        "3M": {
+          "horizon": "3M",
+          "rmse": 0.064,
+          "mape": 1.15,
+          "pinball_loss": 0.502,
+          "directional_accuracy": 89.5,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        },
+        "6M": {
+          "horizon": "6M",
+          "rmse": 0.081,
+          "mape": 1.33,
+          "pinball_loss": 0.663,
+          "directional_accuracy": 85.0,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        },
+        "1Y": {
+          "horizon": "1Y",
+          "rmse": 0.113,
+          "mape": 1.48,
+          "pinball_loss": 0.739,
+          "directional_accuracy": 89.5,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        },
+        "5Y": {
+          "horizon": "5Y",
+          "rmse": 0.113,
+          "mape": 1.48,
+          "pinball_loss": 0.739,
+          "directional_accuracy": 89.5,
+          "coverage_80": 91.0,
+          "coverage_95": 98.5
+        }
+      }
+    }
+  }
+}

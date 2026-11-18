@@ -141,3 +141,18 @@ def test_ai_chatbot_multilingual_and_live_clock():
     assert 'data-lang="hi"' in html
     assert 'id="mpChatbotWidget"' in html
     assert "QUANTITATIVE BULLION AI" in html
+
+
+def test_nightly_refresh_status_and_zero_downtime_reload():
+    r_status = client.get("/api/refresh/status")
+    assert r_status.status_code == 200
+    st = r_status.json()
+    assert st["status"] == "ok"
+    assert "nightly_cron_schedule" in st
+    assert "metals" in st
+
+    r_trig = client.post("/api/refresh/trigger?retrain=false")
+    assert r_trig.status_code == 200
+    trig = r_trig.json()
+    assert trig["reloaded_in_memory"] is True
+    assert trig["status"] == "ok"
