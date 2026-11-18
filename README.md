@@ -3,8 +3,9 @@ title: Metal Predict
 emoji: ⛩️
 colorFrom: red
 colorTo: pink
-sdk: docker
-app_port: 8000
+sdk: gradio
+app_file: app.py
+app_port: 7860
 pinned: true
 short_description: Multi-Horizon Commodity Price Forecasting & Analytics Desk
 ---
