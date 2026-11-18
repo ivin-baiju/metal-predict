@@ -64,3 +64,15 @@ def test_backtest_replay_and_pulse_overview():
     assert r_pulse.status_code == 200
     p = r_pulse.json()
     assert "gsr_radar" in p and "physical_squeeze" in p and "news" in p
+
+
+def test_kigo_frontend_pages_served():
+    r_tool = client.get("/tools/metal-price-predictor.html")
+    assert r_tool.status_code == 200
+    html = r_tool.text
+    assert "Metal" in html and "metal-predictor.js" in html
+    assert "contact-form-card" in html  # Kigo Studio double-bordered ornamental frame
+
+    r_hub = client.get("/tools.html")
+    assert r_hub.status_code == 200
+    assert "metal-price-predictor.html" in r_hub.text

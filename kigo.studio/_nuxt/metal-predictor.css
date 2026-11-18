@@ -1,0 +1,1019 @@
+/* Kigo Studio — Multi-Horizon Metal Price Predictor & Commodity Desk Styles */
+
+@font-face {
+  font-family: "Kigo Display";
+  src: url("../fonts/Poppins-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Kigo Display Italic";
+  src: url("../fonts/PlayfairDisplay-700italic.woff2") format("woff2");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Kanit";
+  src: url("../fonts/Kanit-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Kanit";
+  src: url("../fonts/Kanit-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("../fonts/Poppins-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("../fonts/Poppins-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Kigo Brush";
+  src: url("../fonts/YujiBoku-kigo.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Kigo Haiku";
+  src: url("../fonts/NotoSerifJP-haiku.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+.kigo-metals-page {
+  --ink: #202020;
+  --ink-soft: #4a4144;
+  --paper: #ffffff;
+  --paper-warm: #efece8;
+  --paper-tint: #f7f4f0;
+  --sakura: #db5b7f;
+  --red: #d62828;
+  --frame-ink: #9d3835;
+  --teal: #21464b;
+  --gold-accent: #9a6b16;
+  --bull: #1d6b42;
+  --bear: #b82525;
+  --rule: rgba(39, 39, 39, 0.19);
+  --rule-strong: #272727;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Poppins", -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow-x: hidden;
+  overflow-y: auto !important;
+  position: relative;
+}
+
+body.kigo-metals-body {
+  background: var(--paper) !important;
+  color: var(--ink) !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  height: auto !important;
+}
+
+body.kigo-metals-body #__nuxt {
+  max-width: none !important;
+  padding: 0 !important;
+  position: relative !important;
+  inset: auto !important;
+}
+
+.km-wrap {
+  max-width: 1380px;
+  margin-inline: auto;
+  padding-inline: clamp(18px, 3vw, 44px);
+  width: 100%;
+}
+
+/* Ambient Sakura Petals */
+.km-petals {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  overflow: hidden;
+}
+.km-petal {
+  position: absolute;
+  top: -24px;
+  width: 14px;
+  height: 10px;
+  background: radial-gradient(circle at 30% 30%, #f7b2c4, #db5b7f);
+  border-radius: 75% 25% 75% 25%;
+  opacity: 0.35;
+  animation: km-fall linear infinite;
+}
+@keyframes km-fall {
+  0% {
+    transform: translate3d(0, -20px, 0) rotate(0deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.4;
+  }
+  85% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: translate3d(90px, 105vh, 0) rotate(320deg);
+    opacity: 0;
+  }
+}
+
+/* Hero Section */
+.km-hero {
+  position: relative;
+  padding-top: clamp(2rem, 4vw, 3.75rem);
+  padding-bottom: clamp(2.25rem, 4vw, 3.5rem);
+  border-bottom: 1px solid var(--rule);
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.km-hero__backdrop {
+  position: absolute;
+  right: -4%;
+  top: -8%;
+  width: min(44vw, 580px);
+  opacity: 0.22;
+  pointer-events: none;
+  z-index: -1;
+  transform: scaleX(-1);
+}
+
+.km-hero__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2rem;
+  align-items: end;
+}
+
+.km-haiku {
+  writing-mode: vertical-rl;
+  font-family: "Kigo Haiku", "Hiragino Mincho ProN", serif;
+  font-size: clamp(1rem, 1.35vw, 1.35rem);
+  letter-spacing: 0.14em;
+  line-height: 1.65;
+  color: var(--ink-soft);
+  border-left: 1px solid var(--rule);
+  padding-left: 1rem;
+  max-height: 230px;
+  user-select: none;
+}
+
+.km-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-family: "Kanit", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin-bottom: 0.85rem;
+}
+.km-eyebrow::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+.km-hero__title {
+  font-family: "Kigo Display", "Poppins", sans-serif;
+  font-size: clamp(2.6rem, 5.4vw, 5.6rem);
+  font-weight: 700;
+  letter-spacing: -0.06em;
+  line-height: 0.94;
+  text-transform: uppercase;
+  margin: 0 0 1.15rem;
+}
+.km-hero__title em {
+  color: var(--sakura);
+  font-family: "Kigo Display Italic", "Playfair Display", Georgia, serif;
+  font-style: italic;
+  text-transform: lowercase;
+  letter-spacing: -0.04em;
+  padding-inline: 0.06em;
+}
+
+.km-hero__lead {
+  color: var(--ink-soft);
+  font-size: clamp(0.95rem, 1.1vw, 1.12rem);
+  line-height: 1.6;
+  max-width: 68ch;
+  margin: 0;
+}
+
+/* Metal Selector & Unit Conversion Ribbon */
+.km-control-ribbon {
+  background: var(--paper-warm);
+  border-bottom: 1px solid var(--rule);
+  padding-block: 1.1rem;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  backdrop-filter: blur(12px);
+}
+
+.km-control-ribbon__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+}
+
+.km-metal-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.km-metal-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  padding: 0.6rem 1.05rem;
+  cursor: pointer;
+  transition: transform 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+  text-align: left;
+}
+.km-metal-tab:hover {
+  transform: translateY(-2px);
+}
+.km-metal-tab.is-active {
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: 4px 4px 0 var(--sakura);
+}
+.km-metal-tab__kanji {
+  font-family: "Kigo Brush", serif;
+  font-size: 1.45rem;
+  color: var(--red);
+  line-height: 1;
+}
+.km-metal-tab.is-active .km-metal-tab__kanji {
+  color: var(--sakura);
+}
+.km-metal-tab__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.km-metal-tab__name {
+  font-family: "Kanit", sans-serif;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.km-metal-tab__price {
+  font-family: "Kanit", sans-serif;
+  font-size: 0.78rem;
+  opacity: 0.82;
+  font-variant-numeric: tabular-nums;
+}
+
+.km-unit-switches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.km-unit-label {
+  font-family: "Kanit", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-right: 0.35rem;
+}
+.km-unit-btn {
+  font-family: "Kanit", sans-serif;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid rgba(39, 39, 39, 0.35);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+.km-unit-btn.is-active {
+  background: var(--sakura);
+  border-color: var(--ink);
+  color: #101010;
+}
+
+/* KPI Strip */
+.km-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+@media (max-width: 960px) {
+  .km-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 540px) {
+  .km-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.km-kpi-card {
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  padding: 1.15rem 1.25rem;
+  position: relative;
+}
+.km-kpi-card__stamp {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-family: "Kigo Brush", serif;
+  font-size: 1.5rem;
+  color: var(--red);
+  opacity: 0.85;
+}
+.km-kpi-card__label {
+  font-family: "Kanit", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.km-kpi-card__value {
+  font-family: "Kigo Display", "Poppins", sans-serif;
+  font-size: clamp(1.45rem, 2.2vw, 2.1rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  margin: 0.35rem 0 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+.km-kpi-card__sub {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  line-height: 1.35;
+}
+.km-badge-pos {
+  color: var(--bull);
+  font-weight: 600;
+}
+.km-badge-neg {
+  color: var(--bear);
+  font-weight: 600;
+}
+
+/* Main Two-Column Desk Layout */
+.km-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 7.3fr) minmax(0, 4.7fr);
+  gap: 1.75rem;
+  margin-top: 1.75rem;
+  align-items: start;
+}
+@media (max-width: 1080px) {
+  .km-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Kigo Ornamental Frame Override for Full-Width Cards */
+.km-ornamental-card.contact-form-card {
+  max-width: none !important;
+  padding: clamp(1.5rem, 2.6vw, 2.35rem) !important;
+}
+
+/* Horizon Switcher Header inside Chart Card */
+.km-chart-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.km-chart-title-wrap h2 {
+  font-family: "Kanit", sans-serif;
+  font-size: clamp(1.25rem, 1.8vw, 1.65rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  margin: 0;
+}
+.km-tier-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: "Kanit", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: var(--paper-warm);
+  border: 1px solid var(--rule-strong);
+  padding: 0.22rem 0.65rem;
+  margin-top: 0.35rem;
+}
+.km-tier-pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--red);
+}
+
+.km-horizon-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.km-horizon-btn {
+  font-family: "Kanit", sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.52rem 0.95rem;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+.km-horizon-btn:hover {
+  background: var(--paper-warm);
+}
+.km-horizon-btn.is-active {
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: 3px 3px 0 var(--red);
+}
+
+/* Canvas Stage */
+.km-canvas-stage {
+  position: relative;
+  width: 100%;
+  height: 410px;
+  margin-top: 1rem;
+  background: linear-gradient(180deg, #ffffff 0%, #faf8f5 100%);
+  border: 1px solid var(--rule);
+}
+#kmFanChart {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+}
+
+.km-chart-tooltip {
+  position: absolute;
+  top: 12px;
+  left: 14px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--ink);
+  padding: 0.55rem 0.85rem;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  pointer-events: none;
+  z-index: 4;
+  box-shadow: 3px 3px 0 rgba(32, 32, 32, 0.1);
+}
+
+.km-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1.35rem;
+  margin-top: 0.85rem;
+  font-size: 0.76rem;
+  color: var(--ink-soft);
+}
+.km-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.km-swatch {
+  width: 14px;
+  height: 8px;
+  display: inline-block;
+}
+
+/* Walk-Forward Validation Metrics Strip under Chart */
+.km-metrics-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 1.15rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+}
+@media (max-width: 680px) {
+  .km-metrics-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.km-metric-box {
+  background: var(--paper-warm);
+  padding: 0.6rem 0.75rem;
+  border-left: 2px solid var(--frame-ink);
+}
+.km-metric-box__k {
+  font-family: "Kanit", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-soft);
+}
+.km-metric-box__v {
+  font-family: "Kanit", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Any-Day Precision Inspector Card */
+.km-anyday-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  align-items: end;
+}
+.km-date-input {
+  width: 100%;
+  font-family: "Kanit", sans-serif;
+  font-size: 1rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--ink);
+  background: var(--paper-warm);
+  color: var(--ink);
+}
+.km-preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+.km-preset-chip {
+  font-family: "Kanit", sans-serif;
+  font-size: 0.71rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.3rem 0.6rem;
+  background: var(--paper-warm);
+  border: 1px solid var(--rule-strong);
+  cursor: pointer;
+}
+.km-preset-chip:hover {
+  background: var(--sakura);
+  color: #101010;
+}
+
+.km-anyday-telemetry {
+  margin-top: 1.15rem;
+  padding: 1.1rem;
+  background: var(--paper-warm);
+  border: 1px solid var(--rule-strong);
+}
+.km-anyday-price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.km-anyday-median {
+  font-family: "Kigo Display", "Poppins", sans-serif;
+  font-size: clamp(1.75rem, 2.6vw, 2.35rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+}
+.km-band-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+.km-band-cell {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  padding: 0.55rem 0.7rem;
+}
+.km-band-cell span {
+  display: block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+.km-band-cell strong {
+  font-family: "Kanit", sans-serif;
+  font-size: 0.94rem;
+  font-weight: 600;
+}
+
+.km-catalyst-list {
+  margin-top: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.km-catalyst-item {
+  font-size: 0.78rem;
+  padding: 0.45rem 0.65rem;
+  background: #fff;
+  border-left: 3px solid var(--red);
+  line-height: 1.4;
+}
+
+.km-gtt-box {
+  margin-top: 0.9rem;
+  padding: 0.8rem;
+  background: var(--ink);
+  color: var(--paper);
+}
+.km-gtt-box__title {
+  font-family: "Kanit", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sakura);
+  margin-bottom: 0.45rem;
+}
+.km-gtt-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  font-size: 0.76rem;
+}
+.km-gtt-grid strong {
+  display: block;
+  font-family: "Kanit", sans-serif;
+  font-size: 0.92rem;
+  color: #fff;
+}
+
+/* Section Spacing */
+.km-section {
+  margin-top: clamp(2.5rem, 5vw, 4.25rem);
+  padding-top: clamp(2rem, 4vw, 3.25rem);
+  border-top: 1px solid var(--rule);
+}
+
+.km-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+.km-section-title {
+  font-family: "Kigo Display", "Poppins", sans-serif;
+  font-size: clamp(1.85rem, 3.3vw, 3.2rem);
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  line-height: 1;
+  text-transform: uppercase;
+  margin: 0;
+}
+.km-section-title em {
+  color: var(--sakura);
+  font-family: "Kigo Display Italic", "Playfair Display", Georgia, serif;
+  font-style: italic;
+  text-transform: lowercase;
+}
+
+/* TreeSHAP & Macro Stress-Tester Grid */
+.km-shap-stress-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 6fr);
+  gap: 1.75rem;
+}
+@media (max-width: 980px) {
+  .km-shap-stress-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.km-panel {
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  padding: clamp(1.35rem, 2.2vw, 2rem);
+  position: relative;
+}
+
+.km-shap-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+.km-shap-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.km-shap-row__top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.km-shap-track {
+  height: 10px;
+  background: var(--paper-warm);
+  border: 1px solid var(--rule);
+  position: relative;
+  overflow: hidden;
+}
+.km-shap-fill {
+  height: 100%;
+  transition: width 0.35s ease;
+}
+.km-shap-fill.is-bull {
+  background: var(--teal);
+}
+.km-shap-fill.is-bear {
+  background: var(--red);
+}
+
+.km-narrative-box {
+  margin-top: 1.15rem;
+  padding: 0.9rem 1rem;
+  background: var(--paper-warm);
+  border-left: 3px solid var(--frame-ink);
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+.km-regime-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+.km-regime-item {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--rule);
+  background: var(--paper-tint);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.76rem;
+}
+.km-regime-item strong {
+  font-family: "Kanit", sans-serif;
+  font-size: 0.92rem;
+}
+
+/* Macro Stress-Tester Sliders */
+.km-slider-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.25rem;
+  margin-top: 1rem;
+}
+@media (max-width: 580px) {
+  .km-slider-group {
+    grid-template-columns: 1fr;
+  }
+}
+.km-slider-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.km-slider-item__head {
+  display: flex;
+  justify-content: space-between;
+  font-family: "Kanit", sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.km-slider-item input[type="range"] {
+  width: 100%;
+  accent-color: var(--red);
+  cursor: pointer;
+}
+
+.km-stress-summary {
+  margin-top: 1.15rem;
+  padding: 1rem;
+  background: var(--paper-warm);
+  border: 1px solid var(--rule-strong);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.km-stress-summary div span {
+  display: block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.km-stress-summary div strong {
+  font-family: "Kanit", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+/* COMEX-to-MCX Parity & Tax Ledger */
+.km-parity-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+@media (max-width: 960px) {
+  .km-parity-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 540px) {
+  .km-parity-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Walk-Forward Backtest Time Machine */
+.km-backtest-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  gap: 1.5rem;
+  align-items: stretch;
+}
+@media (max-width: 960px) {
+  .km-backtest-stage {
+    grid-template-columns: 1fr;
+  }
+}
+.km-fold-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.km-fold-btn {
+  text-align: left;
+  padding: 0.75rem 0.95rem;
+  border: 1px solid var(--rule-strong);
+  background: var(--paper);
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+.km-fold-btn.is-active {
+  background: var(--ink);
+  color: var(--paper);
+  border-left: 4px solid var(--sakura);
+}
+.km-fold-btn__title {
+  font-family: "Kanit", sans-serif;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  display: block;
+}
+.km-fold-btn__meta {
+  font-size: 0.74rem;
+  opacity: 0.8;
+}
+
+.km-backtest-canvas-wrap {
+  position: relative;
+  height: 320px;
+  background: #faf8f5;
+  border: 1px solid var(--rule-strong);
+}
+#kmBacktestChart {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Real-World Pulse Desk (GSR, Warehouse Squeeze, Central Bank, FinBERT News) */
+.km-pulse-radars {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+}
+@media (max-width: 960px) {
+  .km-pulse-radars {
+    grid-template-columns: 1fr;
+  }
+}
+
+.km-gauge-bar {
+  height: 12px;
+  background: linear-gradient(90deg, #21464b 0%, #efece8 50%, #d62828 100%);
+  border: 1px solid var(--ink);
+  position: relative;
+  margin: 0.85rem 0;
+}
+.km-gauge-marker {
+  position: absolute;
+  top: -5px;
+  width: 4px;
+  height: 20px;
+  background: var(--ink);
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.km-news-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+@media (max-width: 820px) {
+  .km-news-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.km-news-card {
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.km-news-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: "Kanit", sans-serif;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.km-finbert-badge {
+  padding: 0.18rem 0.55rem;
+  font-weight: 600;
+}
+.km-finbert-badge.is-pos {
+  background: #e3f5ec;
+  color: var(--bull);
+  border: 1px solid var(--bull);
+}
+.km-finbert-badge.is-neg {
+  background: #fde8e8;
+  color: var(--bear);
+  border: 1px solid var(--bear);
+}
+.km-finbert-badge.is-neu {
+  background: var(--paper-warm);
+  color: var(--ink);
+  border: 1px solid var(--rule-strong);
+}
+.km-news-card h4 {
+  font-family: "Kanit", sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0;
+}
+.km-news-card p {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  line-height: 1.45;
+  margin: 0;
+}
