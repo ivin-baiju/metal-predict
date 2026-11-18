@@ -80,7 +80,7 @@ def compute_calendar_catalysts(target_date: pd.Timestamp) -> dict:
     ts = pd.Timestamp(target_date)
     month = int(ts.month)
     day = int(ts.day)
-    dow = int(ts.dayofweek)
+    dow = int(ts.day_of_week)
 
     # Peak Indian festive gold/silver buying: Dhanteras/Diwali (Oct 15 - Nov 15) & Akshaya Tritiya (Apr 18 - May 15)
     is_dhanteras_window = (month == 10 and day >= 15) or (month == 11 and day <= 15)
@@ -212,8 +212,8 @@ def build_feature_frame(raw_df: pd.DataFrame, metal: str) -> pd.DataFrame:
     df["sp500_ret_21d"] = np.log(df["sp500"].astype(float) / df["sp500"].astype(float).shift(21).bfill()).fillna(0.0)
 
     # Cyclical calendar & Indian retail / FOMC encodings
-    doy = dt.dt.dayofyear.astype(float)
-    dow = dt.dt.dayofweek.astype(float)
+    doy = dt.dt.day_of_year.astype(float)
+    dow = dt.dt.day_of_week.astype(float)
     month = dt.dt.month
     day = dt.dt.day
 

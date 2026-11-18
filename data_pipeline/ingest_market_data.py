@@ -85,7 +85,7 @@ def _generate_calibrated_market_history(seed: int = 42) -> dict[str, pd.DataFram
     dates = pd.bdate_range(start="2011-01-03", end="2026-11-18")
     n = len(dates)
     t = np.linspace(0.0, 1.0, n)
-    doy = dates.dayofyear.to_numpy(dtype=float)
+    doy = dates.day_of_year.to_numpy(dtype=float)
 
     # Underlying latent macro state processes (smooth AR(1) cycles so multi-horizon models learn lead-lag dynamics)
     macro_cycle_1 = np.sin(2 * np.pi * t * 2.4) + 0.5 * np.cos(2 * np.pi * t * 5.2)
