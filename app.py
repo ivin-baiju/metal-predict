@@ -7,8 +7,11 @@ from __future__ import annotations
 
 import os
 import uvicorn
+from data_pipeline.ingest_market_data import DEFAULT_DB_PATH, ingest_all_market_data
 from backend.main import app
 
 if __name__ == "__main__":
+    if not os.path.exists(DEFAULT_DB_PATH):
+        ingest_all_market_data(db_path=DEFAULT_DB_PATH)
     port = int(os.environ.get("PORT", os.environ.get("GRADIO_SERVER_PORT", 7860)))
     uvicorn.run(app, host="0.0.0.0", port=port)
