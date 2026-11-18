@@ -1,7 +1,7 @@
 {
   "metals": {
     "gold": {
-      "latest_date": "2026-11-18",
+      "latest_date": "2026-11-18 00:00:00",
       "spot_price": 4120.0,
       "walk_forward_metrics": {
         "1M": {
@@ -52,7 +52,7 @@
       }
     },
     "silver": {
-      "latest_date": "2026-11-18",
+      "latest_date": "2026-11-18 00:00:00",
       "spot_price": 49.8,
       "walk_forward_metrics": {
         "1M": {
@@ -103,7 +103,7 @@
       }
     },
     "platinum": {
-      "latest_date": "2026-11-18",
+      "latest_date": "2026-11-18 00:00:00",
       "spot_price": 1165.0,
       "walk_forward_metrics": {
         "1M": {
@@ -154,7 +154,7 @@
       }
     },
     "copper": {
-      "latest_date": "2026-11-18",
+      "latest_date": "2026-11-18 00:00:00",
       "spot_price": 4.78,
       "walk_forward_metrics": {
         "1M": {

@@ -1,20 +1,22 @@
-"""FastAPI application entry point serving both the ML REST API and Kigo Studio static assets."""
+"""FastAPI application entry point serving both the Metal Predict ML REST API and editorial static assets."""
 
 from __future__ import annotations
 
 from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.cache import get_suite
 from backend.routers import forecast, pulse, simulate
 
-KIGO_STATIC_DIR = Path(__file__).resolve().parent.parent / "kigo.studio"
+STATIC_ROOT_DIR = Path(__file__).resolve().parent.parent / "kigo.studio"
+PREDICTOR_HTML = STATIC_ROOT_DIR / "tools" / "metal-price-predictor.html"
 
 app = FastAPI(
-    title="Kigo Metals — Multi-Horizon Metal Price Predictor API",
-    version="2.0.0",
+    title="Metal Predict — Multi-Horizon Commodity Price Forecasting API",
+    version="2.1.0",
     description="Three-Tier Quantile ML Ensemble (XGBoost + LightGBM/Basis + VECM/Monte Carlo) with TreeSHAP, FinBERT News Pulse, and COMEX-MCX Parity.",
 )
 
@@ -36,10 +38,16 @@ def health_check() -> dict:
     suite = get_suite()
     return {
         "status": "ok",
-        "engine": "Kigo Metals Multi-Horizon Hybrid Ensemble",
+        "engine": "Metal Predict Multi-Horizon Hybrid Ensemble",
         "metals_loaded": list(suite.latest_rows.keys()),
     }
 
 
-if KIGO_STATIC_DIR.exists():
-    app.mount("/", StaticFiles(directory=str(KIGO_STATIC_DIR), html=True), name="kigo_static")
+@app.get("/", include_in_schema=False)
+@app.get("/index.html", include_in_schema=False)
+def serve_root_predictor() -> FileResponse:
+    return FileResponse(str(PREDICTOR_HTML), media_type="text/html")
+
+
+if STATIC_ROOT_DIR.exists():
+    app.mount("/", StaticFiles(directory=str(STATIC_ROOT_DIR), html=True), name="metal_predict_static")

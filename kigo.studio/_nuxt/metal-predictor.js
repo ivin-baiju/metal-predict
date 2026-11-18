@@ -1,7 +1,9 @@
 /**
- * Kigo Metals — Multi-Horizon Metal Price Predictor & Commodity Desk Frontend Engine
- * Connects to FastAPI (/api/predict/horizons, /api/predict/date, /api/simulate/macro-shock,
- * /api/backtest/replay, /api/pulse/overview) and renders interactive high-DPI Canvas fan charts.
+ * Metal Predict — Multi-Horizon Metal Price Predictor & Commodity Desk Frontend Engine
+ * Features:
+ * - Washi-paper & sumi-ink startup preloader + in-place shimmer skeletons
+ * - Animated high-DPI Canvas probability fan & walk-forward backtest charts with exact mouse crosshair math
+ * - Debounced macro stress-tester sliders, rotating sakura hero words, custom follower cursor & parallax
  */
 
 (function () {
@@ -22,7 +24,15 @@
     pulsePayload: null,
     backtestPayload: null,
     foldIndex: 0,
-    hoverPoint: null,
+    fanHover: null, // { type: 'hist'|'forecast', index: number, x: number }
+    backtestHover: null, // { index: number }
+    fanAnimProgress: 1.0,
+    fanAnimFrame: null,
+    btAnimProgress: 1.0,
+    btAnimFrame: null,
+    stressDebounceTimer: null,
+    stressSeq: 0,
+    initialLoadDone: false,
   };
 
   const TROY_OZ_TO_G = 31.1034768;
@@ -94,6 +104,21 @@
     );
   }
 
+  function setPreloaderStep(pct, label) {
+    const fill = document.getElementById("mpPreloaderFill");
+    const status = document.getElementById("mpPreloaderStatus");
+    if (fill) fill.style.width = `${pct}%`;
+    if (status) status.textContent = label;
+  }
+
+  function toggleSkeletonState(isLoading) {
+    const loader = document.getElementById("mpCanvasLoader");
+    if (loader) loader.classList.toggle("is-loading", isLoading);
+    document.querySelectorAll("[data-mp-skeleton-target]").forEach((el) => {
+      el.classList.toggle("mp-skeleton", isLoading);
+    });
+  }
+
   async function fetchJson(url, options) {
     const res = await fetch(url, options);
     if (!res.ok) {
@@ -106,29 +131,63 @@
   async function loadAllForMetal(metal) {
     state.metal = metal;
     state.stressedPayload = null;
-    const q = `metal=${encodeURIComponent(metal)}&usdinr=${state.usdinr}&bcd_pct=${state.bcdPct}&aidc_pct=${state.aidcPct}&gst_pct=${state.gstPct}`;
-    const [horizonsData, pulseData, backtestData] = await Promise.all([
-      fetchJson(`/api/predict/horizons?${q}`),
-      fetchJson(`/api/pulse/overview?metal=${encodeURIComponent(metal)}`),
-      fetchJson(`/api/backtest/replay?metal=${encodeURIComponent(metal)}&fold_index=${state.foldIndex}`),
-    ]);
+    state.fanHover = null;
+    toggleSkeletonState(true);
 
-    state.horizonPayload = horizonsData;
-    state.pulsePayload = pulseData;
-    state.backtestPayload = backtestData;
+    try {
+      if (!state.initialLoadDone) {
+        setPreloaderStep(38, "02 / 04 • Calibrating Tier 1–3 Quantile Ensembles...");
+      }
+      const q = `metal=${encodeURIComponent(metal)}&usdinr=${state.usdinr}&bcd_pct=${state.bcdPct}&aidc_pct=${state.aidcPct}&gst_pct=${state.gstPct}`;
+      const [horizonsData, pulseData, backtestData] = await Promise.all([
+        fetchJson(`/api/predict/horizons?${q}`),
+        fetchJson(`/api/pulse/overview?metal=${encodeURIComponent(metal)}`),
+        fetchJson(`/api/backtest/replay?metal=${encodeURIComponent(metal)}&fold_index=${state.foldIndex}`),
+      ]);
 
-    renderMetalTabs();
-    renderKpiStrip();
-    renderMainFanChart();
-    renderShapAndRegimes();
-    renderParityLedger();
-    renderBacktestSection();
-    renderPulseSection();
+      if (!state.initialLoadDone) {
+        setPreloaderStep(78, "03 / 04 • Extracting TreeSHAP & FinBERT Sentiment...");
+      }
 
-    const dateInput = document.getElementById("kmTargetDateInput");
-    if (dateInput && dateInput.value) {
-      await runAnyDayPrediction(dateInput.value);
+      state.horizonPayload = horizonsData;
+      state.pulsePayload = pulseData;
+      state.backtestPayload = backtestData;
+
+      const dateInput = document.getElementById("kmTargetDateInput");
+      if (dateInput && dateInput.value) {
+        await runAnyDayPrediction(dateInput.value, true);
+      }
+
+      toggleSkeletonState(false);
+      renderMetalTabs();
+      renderKpiStrip();
+      renderMainFanChart(true);
+      renderShapAndRegimes();
+      renderParityLedger();
+      renderBacktestSection(true);
+      renderPulseSection();
+
+      if (!state.initialLoadDone) {
+        setPreloaderStep(100, "04 / 04 • Metal Predict Desk Online");
+        state.initialLoadDone = true;
+        setTimeout(() => {
+          const pre = document.getElementById("mpPreloader");
+          if (pre) pre.classList.add("is-dismissed");
+        }, 280);
+      }
+    } catch (err) {
+      toggleSkeletonState(false);
+      const pre = document.getElementById("mpPreloader");
+      if (pre) pre.classList.add("is-dismissed");
+      console.error("Failed loading Metal Predict telemetry:", err);
     }
+  }
+
+  function triggerStampFlash(el) {
+    if (!el) return;
+    el.classList.remove("is-stamping");
+    void el.offsetWidth;
+    el.classList.add("is-stamping");
   }
 
   function renderMetalTabs() {
@@ -140,7 +199,7 @@
         const active = item.metal === state.metal ? "is-active" : "";
         const chgSign = item.change_24h_pct >= 0 ? "+" : "";
         return `
-          <button type="button" class="km-metal-tab ${active}" data-metal="${item.metal}">
+          <button type="button" class="km-metal-tab ${active}" data-metal="${item.metal}" data-cursor="SWITCH">
             <span class="km-metal-tab__kanji" lang="ja">${item.kanji}</span>
             <span class="km-metal-tab__meta">
               <span class="km-metal-tab__name">${item.name} • ${item.symbol}</span>
@@ -154,6 +213,7 @@
     container.querySelectorAll(".km-metal-tab").forEach((btn) => {
       btn.addEventListener("click", () => {
         const m = btn.getAttribute("data-metal");
+        triggerStampFlash(btn);
         if (m && m !== state.metal) loadAllForMetal(m);
       });
     });
@@ -191,16 +251,39 @@
     document.getElementById("kmKpiGttSub").textContent = `Target Exit: ${formatCurrency(
       gtt.target_exit_usd
     )} • R:R ${gtt.reward_to_risk_ratio}x`;
+
+    const baseTerm = hObj.terminal;
+    if (!state.stressedPayload) {
+      document.getElementById("kmStressBaseVal").textContent = formatCurrency(baseTerm.q50);
+      document.getElementById("kmStressNewVal").textContent = formatCurrency(baseTerm.q50);
+      const deltaEl = document.getElementById("kmStressDeltaVal");
+      deltaEl.className = "km-badge-pos";
+      deltaEl.textContent = "+0.00% (Baseline)";
+    }
   }
 
-  function renderMainFanChart() {
+  function animateFanChartSweep() {
+    if (state.fanAnimFrame) cancelAnimationFrame(state.fanAnimFrame);
+    const start = performance.now();
+    const duration = 560;
+    function step(now) {
+      const t = Math.min(1.0, (now - start) / duration);
+      state.fanAnimProgress = 1 - Math.pow(1 - t, 3); // cubic ease-out
+      drawFanCanvas();
+      if (t < 1.0) {
+        state.fanAnimFrame = requestAnimationFrame(step);
+      }
+    }
+    state.fanAnimFrame = requestAnimationFrame(step);
+  }
+
+  function renderMainFanChart(animate = false) {
     if (!state.horizonPayload) return;
     const p = state.horizonPayload;
     const hObj = p.horizons[state.horizon];
     document.getElementById("kmActiveChartTitle").textContent = `${p.spec.name} (${p.spec.symbol}) — ${state.horizon} Probability Fan`;
     document.getElementById("kmActiveTierBadge").textContent = hObj.tier;
 
-    // Render Walk-Forward evaluation metrics strip for active horizon
     const m = hObj.metrics;
     const strip = document.getElementById("kmMetricsStrip");
     if (strip && m) {
@@ -213,26 +296,21 @@
       `;
     }
 
-    drawFanCanvas();
+    if (animate) {
+      animateFanChartSweep();
+    } else {
+      state.fanAnimProgress = 1.0;
+      drawFanCanvas();
+    }
   }
 
-  function drawFanCanvas() {
-    const canvas = document.getElementById("kmFanChart");
-    if (!canvas || !state.horizonPayload) return;
+  function getFanChartGeometry(canvas) {
     const rect = canvas.parentElement.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    const ctx = canvas.getContext("2d");
-    ctx.scale(dpr, dpr);
-
     const W = rect.width;
     const H = rect.height;
-    const pad = { top: 26, right: 78, bottom: 36, left: 18 };
-    const plotW = W - pad.left - pad.right;
-    const plotH = H - pad.top - pad.bottom;
-
-    ctx.clearRect(0, 0, W, H);
+    const pad = { top: 28, right: 82, bottom: 36, left: 18 };
+    const plotW = Math.max(10, W - pad.left - pad.right);
+    const plotH = Math.max(10, H - pad.top - pad.bottom);
 
     const histCount = state.horizon === "1M" ? 45 : state.horizon === "3M" ? 70 : 100;
     const histSlice = state.horizonPayload.history.slice(-histCount);
@@ -240,8 +318,25 @@
       ? state.stressedPayload.stressed_series
       : state.horizonPayload.horizons[state.horizon].series;
     const baseSeries = state.horizonPayload.horizons[state.horizon].series;
-
     const totalPoints = histSlice.length + activeSeries.length;
+    const splitIdx = histSlice.length - 1;
+
+    return { rect, W, H, pad, plotW, plotH, histSlice, activeSeries, baseSeries, totalPoints, splitIdx };
+  }
+
+  function drawFanCanvas() {
+    const canvas = document.getElementById("kmFanChart");
+    if (!canvas || !state.horizonPayload) return;
+    const geom = getFanChartGeometry(canvas);
+    const { W, H, pad, plotW, plotH, histSlice, activeSeries, baseSeries, totalPoints, splitIdx } = geom;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+
     const allPrices = [];
     histSlice.forEach((h) => {
       allPrices.push(convertPrice(h.high), convertPrice(h.low));
@@ -257,7 +352,7 @@
     const xOf = (idx) => pad.left + (idx / Math.max(totalPoints - 1, 1)) * plotW;
     const yOf = (val) => pad.top + (1 - (val - minP) / Math.max(maxP - minP, 1e-6)) * plotH;
 
-    // Grid lines
+    // Horizontal grid lines & Y-axis labels
     ctx.strokeStyle = "rgba(39, 39, 39, 0.11)";
     ctx.lineWidth = 1;
     ctx.font = "600 11px Kanit, sans-serif";
@@ -276,51 +371,52 @@
       );
     }
 
-    const splitIdx = histSlice.length - 1;
     const splitX = xOf(splitIdx);
+    const visibleForecastCount = Math.max(1, Math.round(activeSeries.length * state.fanAnimProgress));
+    const visibleForecast = activeSeries.slice(0, visibleForecastCount);
 
     // 95% Confidence Cone (Teal wash)
     ctx.beginPath();
     ctx.moveTo(splitX, yOf(convertPrice(histSlice[splitIdx].close)));
-    activeSeries.forEach((pt, i) => {
+    visibleForecast.forEach((pt, i) => {
       ctx.lineTo(xOf(splitIdx + 1 + i), yOf(convertPrice(pt.q975)));
     });
-    for (let i = activeSeries.length - 1; i >= 0; i--) {
-      ctx.lineTo(xOf(splitIdx + 1 + i), yOf(convertPrice(activeSeries[i].q025)));
+    for (let i = visibleForecast.length - 1; i >= 0; i--) {
+      ctx.lineTo(xOf(splitIdx + 1 + i), yOf(convertPrice(visibleForecast[i].q025)));
     }
     ctx.closePath();
-    ctx.fillStyle = "rgba(33, 70, 75, 0.11)";
+    ctx.fillStyle = "rgba(33, 70, 75, 0.12)";
     ctx.fill();
 
     // 80% Confidence Cone (Sakura wash)
     ctx.beginPath();
     ctx.moveTo(splitX, yOf(convertPrice(histSlice[splitIdx].close)));
-    activeSeries.forEach((pt, i) => {
+    visibleForecast.forEach((pt, i) => {
       ctx.lineTo(xOf(splitIdx + 1 + i), yOf(convertPrice(pt.q90)));
     });
-    for (let i = activeSeries.length - 1; i >= 0; i--) {
-      ctx.lineTo(xOf(splitIdx + 1 + i), yOf(convertPrice(activeSeries[i].q10)));
+    for (let i = visibleForecast.length - 1; i >= 0; i--) {
+      ctx.lineTo(xOf(splitIdx + 1 + i), yOf(convertPrice(visibleForecast[i].q10)));
     }
     ctx.closePath();
-    ctx.fillStyle = "rgba(219, 91, 127, 0.22)";
+    ctx.fillStyle = "rgba(219, 91, 127, 0.24)";
     ctx.fill();
 
-    // If 5Y horizon, draw Monte Carlo sample paths
+    // 5Y Monte Carlo Sample Paths
     const samplePaths = state.horizonPayload.horizons[state.horizon].sample_paths;
     if (samplePaths && !state.stressedPayload) {
       ctx.lineWidth = 0.85;
-      ctx.strokeStyle = "rgba(157, 56, 53, 0.22)";
+      ctx.strokeStyle = "rgba(157, 56, 53, 0.24)";
       samplePaths.forEach((pathArr) => {
         ctx.beginPath();
         ctx.moveTo(splitX, yOf(convertPrice(histSlice[splitIdx].close)));
-        pathArr.forEach((pVal, idx) => {
+        pathArr.slice(0, visibleForecastCount).forEach((pVal, idx) => {
           ctx.lineTo(xOf(splitIdx + 1 + idx), yOf(convertPrice(pVal)));
         });
         ctx.stroke();
       });
     }
 
-    // Historical Candlesticks + Close Line
+    // Historical Candlesticks
     const candleWidth = Math.max(2, Math.min(7, (plotW / totalPoints) * 0.65));
     histSlice.forEach((bar, i) => {
       const cx = xOf(i);
@@ -341,11 +437,11 @@
       ctx.fillRect(cx - candleWidth / 2, topY, candleWidth, Math.max(1.5, botY - topY));
     });
 
-    // Anchor Divider ("TODAY")
+    // TODAY Anchor Divider
     ctx.save();
     ctx.setLineDash([4, 4]);
     ctx.strokeStyle = "#9d3835";
-    ctx.lineWidth = 1.2;
+    ctx.lineWidth = 1.25;
     ctx.beginPath();
     ctx.moveTo(splitX, pad.top);
     ctx.lineTo(splitX, H - pad.bottom);
@@ -354,9 +450,9 @@
 
     ctx.fillStyle = "#9d3835";
     ctx.font = "600 10px Kanit, sans-serif";
-    ctx.fillText("TODAY • ANCHOR", splitX - 36, pad.top - 8);
+    ctx.fillText("TODAY • ANCHOR", Math.max(pad.left, splitX - 38), pad.top - 8);
 
-    // If Macro Stress is active, draw baseline median dashed
+    // Baseline Median Dashed if Stressed
     if (state.stressedPayload) {
       ctx.save();
       ctx.setLineDash([5, 4]);
@@ -364,22 +460,98 @@
       ctx.lineWidth = 1.6;
       ctx.beginPath();
       ctx.moveTo(splitX, yOf(convertPrice(histSlice[splitIdx].close)));
-      baseSeries.forEach((pt, i) => {
+      baseSeries.slice(0, visibleForecastCount).forEach((pt, i) => {
         ctx.lineTo(xOf(splitIdx + 1 + i), yOf(convertPrice(pt.q50)));
       });
       ctx.stroke();
       ctx.restore();
     }
 
-    // Active Median Projection Trajectory (Crimson/Sakura Kigo stroke)
+    // Active Median Trajectory (Crimson stroke)
     ctx.strokeStyle = "#d62828";
     ctx.lineWidth = 2.6;
     ctx.beginPath();
     ctx.moveTo(splitX, yOf(convertPrice(histSlice[splitIdx].close)));
-    activeSeries.forEach((pt, i) => {
+    visibleForecast.forEach((pt, i) => {
       ctx.lineTo(xOf(splitIdx + 1 + i), yOf(convertPrice(pt.q50)));
     });
     ctx.stroke();
+
+    // Terminal Forecast Beacon Dot
+    const lastVisPt = visibleForecast[visibleForecast.length - 1];
+    const termX = xOf(splitIdx + visibleForecast.length);
+    const termY = yOf(convertPrice(lastVisPt.q50));
+    ctx.fillStyle = "rgba(214, 40, 40, 0.2)";
+    ctx.beginPath();
+    ctx.arc(termX, termY, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#d62828";
+    ctx.beginPath();
+    ctx.arc(termX, termY, 4.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Interactive Hover Crosshair + Data Nodes
+    const tooltip = document.getElementById("kmChartTooltip");
+    if (state.fanHover) {
+      const h = state.fanHover;
+      const hx = xOf(h.globalIdx);
+      ctx.save();
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = "#202020";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(hx, pad.top);
+      ctx.lineTo(hx, H - pad.bottom);
+      ctx.stroke();
+      ctx.restore();
+
+      if (h.type === "hist") {
+        const bar = histSlice[h.localIdx];
+        const cy = yOf(convertPrice(bar.close));
+        ctx.fillStyle = "#21464b";
+        ctx.beginPath();
+        ctx.arc(hx, cy, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        if (tooltip) {
+          tooltip.innerHTML = `
+            <strong>Historical Session: ${bar.date}</strong><br/>
+            Close: <strong>${formatCurrency(bar.close)}</strong> • Open: ${formatCurrency(bar.open)}<br/>
+            High: ${formatCurrency(bar.high)} • Low: ${formatCurrency(bar.low)}
+          `;
+        }
+      } else {
+        const pt = activeSeries[h.localIdx];
+        const y50 = yOf(convertPrice(pt.q50));
+        const y90 = yOf(convertPrice(pt.q90));
+        const y10 = yOf(convertPrice(pt.q10));
+        [
+          [y90, "#db5b7f"],
+          [y50, "#d62828"],
+          [y10, "#db5b7f"],
+        ].forEach(([py, col]) => {
+          ctx.fillStyle = col;
+          ctx.beginPath();
+          ctx.arc(hx, py, 4.2, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        if (tooltip) {
+          tooltip.innerHTML = `
+            <strong>Forecast Target: ${pt.date} (+${pt.days_ahead}D)</strong><br/>
+            Median (Q50): <strong>${formatCurrency(pt.q50)}</strong><br/>
+            80% Cone: ${formatCurrency(pt.q10)} – ${formatCurrency(pt.q90)}<br/>
+            95% Cone: ${formatCurrency(pt.q025)} – ${formatCurrency(pt.q975)}
+          `;
+        }
+      }
+    } else if (tooltip) {
+      const lastPt = activeSeries[activeSeries.length - 1];
+      tooltip.innerHTML = `
+        <strong>Horizon Terminal: ${lastPt.date} (+${lastPt.days_ahead}D)</strong><br/>
+        Median (Q50): <strong>${formatCurrency(lastPt.q50)}</strong><br/>
+        80% Cone: ${formatCurrency(lastPt.q10)} – ${formatCurrency(lastPt.q90)}<br/>
+        95% Cone: ${formatCurrency(lastPt.q025)} – ${formatCurrency(lastPt.q975)}
+      `;
+    }
 
     // X-axis date labels
     ctx.fillStyle = "#4a4144";
@@ -388,31 +560,23 @@
     ctx.fillText(histSlice[splitIdx].date, Math.max(pad.left + 80, splitX - 30), H - 10);
     const lastPt = activeSeries[activeSeries.length - 1];
     ctx.fillText(lastPt.date, W - pad.right - 72, H - 10);
-
-    // Update tooltip
-    const tooltip = document.getElementById("kmChartTooltip");
-    if (tooltip) {
-      const pt = state.hoverPoint || lastPt;
-      tooltip.innerHTML = `
-        <strong>Target: ${pt.date} (+${pt.days_ahead}D)</strong><br/>
-        Median (Q50): <strong>${formatCurrency(pt.q50)}</strong><br/>
-        80% Band: ${formatCurrency(pt.q10)} – ${formatCurrency(pt.q90)}<br/>
-        95% Band: ${formatCurrency(pt.q025)} – ${formatCurrency(pt.q975)}
-      `;
-    }
   }
 
-  async function runAnyDayPrediction(targetDate) {
+  async function runAnyDayPrediction(targetDate, silent = false) {
     const errEl = document.getElementById("kmAnyDayError");
+    const box = document.getElementById("kmAnyDayTelemetryBox");
     if (errEl) errEl.textContent = "";
+    if (!silent && box) box.classList.add("mp-skeleton");
     try {
       const q = `metal=${encodeURIComponent(state.metal)}&target_date=${encodeURIComponent(
         targetDate
       )}&usdinr=${state.usdinr}&bcd_pct=${state.bcdPct}&aidc_pct=${state.aidcPct}&gst_pct=${state.gstPct}`;
       const data = await fetchJson(`/api/predict/date?${q}`);
       state.anyDayPayload = data;
+      if (box) box.classList.remove("mp-skeleton");
       renderAnyDayCard(data);
     } catch (err) {
+      if (box) box.classList.remove("mp-skeleton");
       if (errEl) errEl.textContent = err.message;
     }
   }
@@ -427,12 +591,20 @@
 
     document.getElementById("kmAnyDay80").textContent = `${formatCurrency(d.q10)} – ${formatCurrency(d.q90)}`;
     document.getElementById("kmAnyDay95").textContent = `${formatCurrency(d.q025)} – ${formatCurrency(d.q975)}`;
-    document.getElementById("kmAnyDayMcx").textContent =
-      "₹" + Number(d.mcx_parity_at_target.primary_mcx_inr).toLocaleString("en-IN");
+
+    const liveMcxInr = convertPrice(
+      d.q50,
+      state.metal,
+      state.metal === "gold" || state.metal === "platinum" ? "INR_10G_24K" : "INR_1KG"
+    );
+    document.getElementById("kmAnyDayMcx").textContent = "₹" + Math.round(liveMcxInr).toLocaleString("en-IN");
+    const liveEtf = convertPrice(d.q50, state.metal, "ETF_NAV");
     document.getElementById("kmAnyDayEtf").textContent =
       state.metal === "silver"
-        ? `Silver BeES ₹${d.mcx_parity_at_target.etf.silver_bees_nav}`
-        : `Gold BeES ₹${d.mcx_parity_at_target.etf.gold_bees_nav}`;
+        ? `Silver BeES ₹${liveEtf.toFixed(2)}`
+        : state.metal === "gold"
+        ? `Gold BeES ₹${liveEtf.toFixed(2)}`
+        : `ETF Unit $${liveEtf.toFixed(2)}`;
 
     const catList = document.getElementById("kmAnyDayCatalysts");
     catList.innerHTML = (d.catalysts.active_catalysts || [])
@@ -467,12 +639,18 @@
                 <span class="${isBull ? "km-badge-pos" : "km-badge-neg"}">${sign}${d.signed_weight_pct}%</span>
               </div>
               <div class="km-shap-track">
-                <div class="km-shap-fill ${isBull ? "is-bull" : "is-bear"}" style="width:${width}%"></div>
+                <div class="km-shap-fill ${isBull ? "is-bull" : "is-bear"}" data-target-width="${width}%"></div>
               </div>
             </div>
           `;
         })
         .join("");
+
+      requestAnimationFrame(() => {
+        barsEl.querySelectorAll(".km-shap-fill").forEach((bar) => {
+          bar.style.width = bar.getAttribute("data-target-width") || "50%";
+        });
+      });
     }
 
     const narrative =
@@ -480,10 +658,11 @@
     const narEl = document.getElementById("kmShapNarrative");
     if (narEl) narEl.textContent = narrative;
 
-    const regimes =
-      state.horizonPayload.horizons["6M"].regime_probabilities ||
-      state.horizonPayload.horizons["1Y"].regime_probabilities ||
-      {};
+    const regimes = state.stressedPayload
+      ? state.stressedPayload.stressed_regime_probabilities
+      : state.horizonPayload.horizons[state.horizon].regime_probabilities ||
+        state.horizonPayload.horizons["6M"].regime_probabilities ||
+        {};
     const regEl = document.getElementById("kmRegimeGrid");
     if (regEl) {
       regEl.innerHTML = Object.entries(regimes)
@@ -492,7 +671,15 @@
     }
   }
 
+  function scheduleMacroShockSimulation() {
+    if (state.stressDebounceTimer) clearTimeout(state.stressDebounceTimer);
+    state.stressDebounceTimer = setTimeout(() => {
+      triggerMacroShockSimulation();
+    }, 65);
+  }
+
   async function triggerMacroShockSimulation() {
+    const seq = ++state.stressSeq;
     const body = {
       metal: state.metal,
       horizon: state.horizon,
@@ -509,6 +696,7 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+    if (seq !== state.stressSeq) return; // Ignore stale response
     state.stressedPayload = sim;
 
     document.getElementById("kmStressBaseVal").textContent = formatCurrency(sim.baseline_terminal_q50);
@@ -523,6 +711,8 @@
     renderKpiStrip();
     drawFanCanvas();
     renderParityLedger();
+    renderShapAndRegimes();
+    if (state.anyDayPayload) renderAnyDayCard(state.anyDayPayload);
   }
 
   function renderParityLedger() {
@@ -557,7 +747,7 @@
       </div>
       <div class="km-kpi-card">
         <span class="km-kpi-card__stamp" lang="ja">証</span>
-        <div class="km-kpi-card__label">Domestic & US ETF Parity</div>
+        <div class="km-kpi-card__label">Domestic &amp; US ETF Parity</div>
         <div class="km-kpi-card__value">₹${
           state.metal === "silver" ? parity.etf.silver_bees_nav : parity.etf.gold_bees_nav
         }</div>
@@ -568,7 +758,22 @@
     `;
   }
 
-  function renderBacktestSection() {
+  function animateBacktestSweep() {
+    if (state.btAnimFrame) cancelAnimationFrame(state.btAnimFrame);
+    const start = performance.now();
+    const duration = 500;
+    function step(now) {
+      const t = Math.min(1.0, (now - start) / duration);
+      state.btAnimProgress = 1 - Math.pow(1 - t, 3);
+      drawBacktestCanvas();
+      if (t < 1.0) {
+        state.btAnimFrame = requestAnimationFrame(step);
+      }
+    }
+    state.btAnimFrame = requestAnimationFrame(step);
+  }
+
+  function renderBacktestSection(animate = false) {
     if (!state.backtestPayload) return;
     const bt = state.backtestPayload;
     const foldList = document.getElementById("kmFoldList");
@@ -577,9 +782,11 @@
         .map((f) => {
           const active = f.fold_index === bt.selected_fold_index ? "is-active" : "";
           return `
-            <button type="button" class="km-fold-btn ${active}" data-fold="${f.fold_index}">
+            <button type="button" class="km-fold-btn ${active}" data-fold="${f.fold_index}" data-cursor="REPLAY">
               <span class="km-fold-btn__title">${f.label}</span>
-              <span class="km-fold-btn__meta">Anchor: ${f.anchor_date} ($${f.anchor_price}) • Out-of-Sample MAPE: ${f.fold_mape}% • DA: ${f.fold_da}%</span>
+              <span class="km-fold-btn__meta">Anchor: ${f.anchor_date} (${formatCurrency(
+            f.anchor_price
+          )}) • MAPE: ${f.fold_mape}% • DA: ${f.fold_da}%</span>
             </button>
           `;
         })
@@ -589,15 +796,21 @@
         btn.addEventListener("click", async () => {
           const idx = Number(btn.getAttribute("data-fold")) || 0;
           state.foldIndex = idx;
+          state.backtestHover = null;
           state.backtestPayload = await fetchJson(
             `/api/backtest/replay?metal=${encodeURIComponent(state.metal)}&fold_index=${idx}`
           );
-          renderBacktestSection();
+          renderBacktestSection(true);
         });
       });
     }
 
-    drawBacktestCanvas();
+    if (animate) {
+      animateBacktestSweep();
+    } else {
+      state.btAnimProgress = 1.0;
+      drawBacktestCanvas();
+    }
   }
 
   function drawBacktestCanvas() {
@@ -612,9 +825,9 @@
 
     const W = rect.width;
     const H = rect.height;
-    const pad = { top: 24, right: 64, bottom: 32, left: 18 };
-    const plotW = W - pad.left - pad.right;
-    const plotH = H - pad.top - pad.bottom;
+    const pad = { top: 28, right: 78, bottom: 32, left: 18 };
+    const plotW = Math.max(10, W - pad.left - pad.right);
+    const plotH = Math.max(10, H - pad.top - pad.bottom);
 
     ctx.clearRect(0, 0, W, H);
     const bt = state.backtestPayload;
@@ -623,35 +836,56 @@
     const total = before.length + preds.length;
 
     const vals = [];
-    before.forEach((b) => vals.push(b.close));
-    preds.forEach((p) => vals.push(p.q10, p.q90, p.actual));
+    before.forEach((b) => vals.push(convertPrice(b.close)));
+    preds.forEach((p) => vals.push(convertPrice(p.q10), convertPrice(p.q90), convertPrice(p.actual)));
     const minP = Math.min(...vals) * 0.985;
     const maxP = Math.max(...vals) * 1.015;
 
     const xOf = (i) => pad.left + (i / Math.max(total - 1, 1)) * plotW;
     const yOf = (v) => pad.top + (1 - (v - minP) / Math.max(maxP - minP, 1e-6)) * plotH;
 
+    // Grid lines
+    ctx.strokeStyle = "rgba(39, 39, 39, 0.11)";
+    ctx.lineWidth = 1;
+    ctx.font = "600 11px Kanit, sans-serif";
+    ctx.fillStyle = "#4a4144";
+    for (let i = 0; i <= 3; i++) {
+      const y = pad.top + (i / 3) * plotH;
+      const val = maxP - (i / 3) * (maxP - minP);
+      ctx.beginPath();
+      ctx.moveTo(pad.left, y);
+      ctx.lineTo(W - pad.right, y);
+      ctx.stroke();
+      ctx.fillText(
+        val >= 1000 ? Math.round(val).toLocaleString() : val.toFixed(2),
+        W - pad.right + 8,
+        y + 4
+      );
+    }
+
     const splitIdx = before.length - 1;
     const splitX = xOf(splitIdx);
+    const visCount = Math.max(1, Math.round(preds.length * state.btAnimProgress));
+    const visPreds = preds.slice(0, visCount);
 
     // 80% Out-of-Sample Forecast Cone
     ctx.beginPath();
-    ctx.moveTo(splitX, yOf(before[splitIdx].close));
-    preds.forEach((p, i) => ctx.lineTo(xOf(splitIdx + 1 + i), yOf(p.q90)));
-    for (let i = preds.length - 1; i >= 0; i--) {
-      ctx.lineTo(xOf(splitIdx + 1 + i), yOf(preds[i].q10));
+    ctx.moveTo(splitX, yOf(convertPrice(before[splitIdx].close)));
+    visPreds.forEach((p, i) => ctx.lineTo(xOf(splitIdx + 1 + i), yOf(convertPrice(p.q90))));
+    for (let i = visPreds.length - 1; i >= 0; i--) {
+      ctx.lineTo(xOf(splitIdx + 1 + i), yOf(convertPrice(visPreds[i].q10)));
     }
     ctx.closePath();
     ctx.fillStyle = "rgba(219, 91, 127, 0.22)";
     ctx.fill();
 
-    // Historical pre-anchor curve
+    // Pre-anchor training curve
     ctx.strokeStyle = "#202020";
     ctx.lineWidth = 2;
     ctx.beginPath();
     before.forEach((b, i) => {
-      if (i === 0) ctx.moveTo(xOf(i), yOf(b.close));
-      else ctx.lineTo(xOf(i), yOf(b.close));
+      if (i === 0) ctx.moveTo(xOf(i), yOf(convertPrice(b.close)));
+      else ctx.lineTo(xOf(i), yOf(convertPrice(b.close)));
     });
     ctx.stroke();
 
@@ -659,8 +893,8 @@
     ctx.strokeStyle = "#21464b";
     ctx.lineWidth = 2.4;
     ctx.beginPath();
-    ctx.moveTo(splitX, yOf(before[splitIdx].close));
-    preds.forEach((p, i) => ctx.lineTo(xOf(splitIdx + 1 + i), yOf(p.actual)));
+    ctx.moveTo(splitX, yOf(convertPrice(before[splitIdx].close)));
+    visPreds.forEach((p, i) => ctx.lineTo(xOf(splitIdx + 1 + i), yOf(convertPrice(p.actual))));
     ctx.stroke();
 
     // Model Out-of-Sample Predicted Median (Crimson dashed)
@@ -669,14 +903,52 @@
     ctx.strokeStyle = "#d62828";
     ctx.lineWidth = 2.4;
     ctx.beginPath();
-    ctx.moveTo(splitX, yOf(before[splitIdx].close));
-    preds.forEach((p, i) => ctx.lineTo(xOf(splitIdx + 1 + i), yOf(p.q50)));
+    ctx.moveTo(splitX, yOf(convertPrice(before[splitIdx].close)));
+    visPreds.forEach((p, i) => ctx.lineTo(xOf(splitIdx + 1 + i), yOf(convertPrice(p.q50))));
     ctx.stroke();
     ctx.restore();
 
     ctx.fillStyle = "#9d3835";
     ctx.font = "600 11px Kanit, sans-serif";
-    ctx.fillText(`WALK-FORWARD CUTOFF: ${bt.anchor_date}`, Math.max(16, splitX - 70), pad.top - 6);
+    ctx.fillText(`WALK-FORWARD CUTOFF: ${bt.anchor_date}`, Math.max(16, splitX - 70), pad.top - 8);
+
+    // Date labels
+    ctx.fillStyle = "#4a4144";
+    ctx.font = "400 11px Poppins, sans-serif";
+    ctx.fillText(before[0].date, pad.left, H - 8);
+    if (preds.length) {
+      ctx.fillText(preds[preds.length - 1].date, W - pad.right - 72, H - 8);
+    }
+
+    // Backtest Hover Crosshair
+    if (state.backtestHover && preds[state.backtestHover.index]) {
+      const pIdx = state.backtestHover.index;
+      const pt = preds[pIdx];
+      const hx = xOf(splitIdx + 1 + pIdx);
+      ctx.save();
+      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = "#202020";
+      ctx.beginPath();
+      ctx.moveTo(hx, pad.top);
+      ctx.lineTo(hx, H - pad.bottom);
+      ctx.stroke();
+      ctx.restore();
+
+      const errPct = (((pt.q50 - pt.actual) / Math.max(pt.actual, 1e-6)) * 100).toFixed(2);
+      ctx.fillStyle = "rgba(255,255,255,0.94)";
+      ctx.fillRect(pad.left + 8, pad.top + 6, 265, 52);
+      ctx.strokeStyle = "#202020";
+      ctx.strokeRect(pad.left + 8, pad.top + 6, 265, 52);
+      ctx.fillStyle = "#202020";
+      ctx.font = "600 11px Kanit, sans-serif";
+      ctx.fillText(`Replay Date: ${pt.date} (+${pt.days_ahead}D)`, pad.left + 16, pad.top + 22);
+      ctx.font = "400 11px Poppins, sans-serif";
+      ctx.fillText(
+        `Predicted: ${formatCurrency(pt.q50)} vs Actual: ${formatCurrency(pt.actual)} (${errPct}%)`,
+        pad.left + 16,
+        pad.top + 42
+      );
+    }
   }
 
   function renderPulseSection() {
@@ -715,32 +987,112 @@
     }
   }
 
+  function initThemeAnimations() {
+    // 1. Rotating Hero Sakura Word
+    const words = ["forecasts", "quantiles", "regimes", "parity", "conviction"];
+    let wIdx = 0;
+    const rotEl = document.getElementById("mpRotatingHeroWord");
+    if (rotEl) {
+      setInterval(() => {
+        rotEl.classList.remove("is-in");
+        rotEl.classList.add("is-out");
+        setTimeout(() => {
+          wIdx = (wIdx + 1) % words.length;
+          rotEl.textContent = words[wIdx];
+          rotEl.classList.remove("is-out");
+          rotEl.classList.add("is-in");
+        }, 420);
+      }, 2800);
+    }
+
+    // 2. Scroll-Triggered Reveal & Parallax + Paper Scrollbar
+    const revealEls = document.querySelectorAll("[data-mp-reveal]");
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("is-visible");
+            }
+          });
+        },
+        { threshold: 0.1 }
+      );
+      revealEls.forEach((el) => io.observe(el));
+    } else {
+      revealEls.forEach((el) => el.classList.add("is-visible"));
+    }
+
+    const thumb = document.getElementById("mpScrollbarThumb");
+    window.addEventListener(
+      "scroll",
+      () => {
+        const scrollY = window.scrollY || window.pageYOffset;
+        const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        const pct = Math.min(1, Math.max(0, scrollY / maxScroll));
+        if (thumb) {
+          thumb.style.top = `${pct * 74}%`;
+        }
+        document.documentElement.style.setProperty("--mp-parallax-y", `${scrollY * 0.12}px`);
+      },
+      { passive: true }
+    );
+
+    // 3. Custom Glassmorphic Follower Cursor
+    const cursor = document.getElementById("mpCustomCursor");
+    const cursorLabel = document.getElementById("mpCustomCursorLabel");
+    if (cursor) {
+      window.addEventListener(
+        "mousemove",
+        (e) => {
+          cursor.style.transform = `translate3d(${e.clientX - cursor.offsetWidth / 2}px, ${
+            e.clientY - cursor.offsetHeight / 2
+          }px, 0)`;
+          const target = e.target.closest("[data-cursor], button, a, input, canvas");
+          if (target) {
+            cursor.classList.add("is-active");
+            const lbl =
+              target.getAttribute("data-cursor") ||
+              (target.tagName === "CANVAS" ? "CROSSHAIR" : "SELECT");
+            if (cursorLabel) cursorLabel.textContent = lbl;
+          } else {
+            cursor.classList.remove("is-active");
+            if (cursorLabel) cursorLabel.textContent = "";
+          }
+        },
+        { passive: true }
+      );
+    }
+  }
+
   function bindEvents() {
     // Horizon switcher
     document.querySelectorAll(".km-horizon-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         document.querySelectorAll(".km-horizon-btn").forEach((b) => b.classList.remove("is-active"));
         btn.classList.add("is-active");
+        triggerStampFlash(btn);
         state.horizon = btn.getAttribute("data-horizon") || "1M";
-        state.hoverPoint = null;
+        state.fanHover = null;
         if (state.stressedPayload) {
           triggerMacroShockSimulation();
         } else {
           renderKpiStrip();
-          renderMainFanChart();
+          renderMainFanChart(true);
           renderShapAndRegimes();
         }
       });
     });
 
     // Unit/Currency switcher
-    document.querySelectorAll(".km-unit-btn").forEach((btn) => {
+    document.querySelectorAll(".km-unit-btn[data-unit]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll(".km-unit-btn").forEach((b) => b.classList.remove("is-active"));
+        document.querySelectorAll(".km-unit-btn[data-unit]").forEach((b) => b.classList.remove("is-active"));
         btn.classList.add("is-active");
         state.unitMode = btn.getAttribute("data-unit") || "USD_OZ";
         renderKpiStrip();
         drawFanCanvas();
+        drawBacktestCanvas();
         if (state.anyDayPayload) renderAnyDayCard(state.anyDayPayload);
       });
     });
@@ -749,7 +1101,10 @@
     const dateBtn = document.getElementById("kmAnyDayBtn");
     const dateInput = document.getElementById("kmTargetDateInput");
     if (dateBtn && dateInput) {
-      dateBtn.addEventListener("click", () => runAnyDayPrediction(dateInput.value));
+      dateBtn.addEventListener("click", () => {
+        triggerStampFlash(dateBtn);
+        runAnyDayPrediction(dateInput.value);
+      });
       dateInput.addEventListener("change", () => runAnyDayPrediction(dateInput.value));
     }
     document.querySelectorAll(".km-preset-chip").forEach((chip) => {
@@ -770,7 +1125,7 @@
       el.addEventListener("input", () => {
         state[key] = Number(el.value);
         if (vEl) vEl.textContent = fmt(state[key]);
-        triggerMacroShockSimulation();
+        scheduleMacroShockSimulation();
       });
     };
     bindSlider("kmSliderUsdinr", "kmValUsdinr", "usdinr", (v) => `₹${v.toFixed(2)}`);
@@ -803,24 +1158,63 @@
         document.getElementById("kmSliderGst").value = 3.0;
         document.getElementById("kmValGst").textContent = "3.0%";
         renderKpiStrip();
-        drawFanCanvas();
+        renderMainFanChart(true);
         renderParityLedger();
+        renderShapAndRegimes();
+        if (state.anyDayPayload) renderAnyDayCard(state.anyDayPayload);
       });
     }
 
-    // Canvas hover crosshair
-    const canvas = document.getElementById("kmFanChart");
-    if (canvas) {
-      canvas.addEventListener("mousemove", (e) => {
+    // Main Fan Chart Crosshair (Accurate Global -> Historical/Forecast Index Math)
+    const fanCanvas = document.getElementById("kmFanChart");
+    if (fanCanvas) {
+      fanCanvas.addEventListener("mousemove", (e) => {
         if (!state.horizonPayload) return;
-        const rect = canvas.getBoundingClientRect();
-        const relX = (e.clientX - rect.left) / Math.max(rect.width, 1);
-        const series = state.stressedPayload
-          ? state.stressedPayload.stressed_series
-          : state.horizonPayload.horizons[state.horizon].series;
-        const idx = Math.min(series.length - 1, Math.max(0, Math.floor(relX * series.length)));
-        state.hoverPoint = series[idx];
+        const geom = getFanChartGeometry(fanCanvas);
+        const mouseX = e.clientX - geom.rect.left;
+        const ratio = (mouseX - geom.pad.left) / geom.plotW;
+        const globalIdx = Math.min(
+          geom.totalPoints - 1,
+          Math.max(0, Math.round(ratio * (geom.totalPoints - 1)))
+        );
+        if (globalIdx <= geom.splitIdx) {
+          state.fanHover = { type: "hist", localIdx: globalIdx, globalIdx };
+        } else {
+          const fIdx = Math.min(
+            geom.activeSeries.length - 1,
+            Math.max(0, globalIdx - (geom.splitIdx + 1))
+          );
+          state.fanHover = { type: "forecast", localIdx: fIdx, globalIdx: geom.splitIdx + 1 + fIdx };
+        }
         drawFanCanvas();
+      });
+      fanCanvas.addEventListener("mouseleave", () => {
+        state.fanHover = null;
+        drawFanCanvas();
+      });
+    }
+
+    // Backtest Chart Crosshair
+    const btCanvas = document.getElementById("kmBacktestChart");
+    if (btCanvas) {
+      btCanvas.addEventListener("mousemove", (e) => {
+        if (!state.backtestPayload) return;
+        const rect = btCanvas.getBoundingClientRect();
+        const padLeft = 18;
+        const padRight = 78;
+        const plotW = Math.max(10, rect.width - padLeft - padRight);
+        const beforeLen = (state.backtestPayload.history_before || []).length;
+        const preds = state.backtestPayload.predicted_series || [];
+        const total = beforeLen + preds.length;
+        const ratio = (e.clientX - rect.left - padLeft) / plotW;
+        const globalIdx = Math.round(ratio * (total - 1));
+        const pIdx = Math.min(preds.length - 1, Math.max(0, globalIdx - beforeLen));
+        state.backtestHover = { index: pIdx };
+        drawBacktestCanvas();
+      });
+      btCanvas.addEventListener("mouseleave", () => {
+        state.backtestHover = null;
+        drawBacktestCanvas();
       });
     }
 
@@ -831,6 +1225,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    initThemeAnimations();
     bindEvents();
     loadAllForMetal("gold");
   });

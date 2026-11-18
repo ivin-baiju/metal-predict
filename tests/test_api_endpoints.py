@@ -1,3 +1,4 @@
+import re
 from fastapi.testclient import TestClient
 from backend.main import app
 
@@ -12,6 +13,8 @@ def test_horizons_and_case_insensitive_metal():
     assert set(data["horizons"].keys()) == {"1M", "3M", "6M", "1Y", "5Y"}
     assert len(data["history"]) >= 60
     assert len(data["shap_drivers"]) >= 6
+    assert "regime_probabilities" in data["horizons"]["1M"]
+    assert "regime_probabilities" in data["horizons"]["5Y"]
 
     r_bad = client.get("/api/predict/horizons?metal=unobtanium")
     assert r_bad.status_code == 404
@@ -53,6 +56,7 @@ def test_macro_shock_extreme_sliders_preserve_quantile_order():
     for pt in sim["stressed_series"]:
         assert pt["q025"] < pt["q10"] < pt["q50"] < pt["q90"] < pt["q975"]
     assert sim["stressed_parity"]["inr_per_1kg"] > 0
+    assert "stressed_regime_probabilities" in sim
 
 
 def test_backtest_replay_and_pulse_overview():
@@ -66,13 +70,27 @@ def test_backtest_replay_and_pulse_overview():
     assert "gsr_radar" in p and "physical_squeeze" in p and "news" in p
 
 
-def test_kigo_frontend_pages_served():
-    r_tool = client.get("/tools/metal-price-predictor.html")
-    assert r_tool.status_code == 200
-    html = r_tool.text
-    assert "Metal" in html and "metal-predictor.js" in html
-    assert "contact-form-card" in html  # Kigo Studio double-bordered ornamental frame
+def test_metal_predict_branding_skeleton_and_no_kigo():
+    # Health check branding
+    r_health = client.get("/api/health")
+    assert r_health.status_code == 200
+    assert "Metal Predict" in r_health.json()["engine"]
+    assert "kigo" not in r_health.text.lower()
 
+    # Main Predictor page at both / and /tools/metal-price-predictor.html
+    for path in ["/", "/tools/metal-price-predictor.html"]:
+        r_page = client.get(path)
+        assert r_page.status_code == 200
+        html = r_page.text
+        assert "Metal Predict" in html
+        assert "mpPreloader" in html
+        assert "mp-skeleton" in html
+        assert "contact-form-card" in html
+        assert re.search(r"kigo", html, re.IGNORECASE) is None
+
+    # Tools Hub page
     r_hub = client.get("/tools.html")
     assert r_hub.status_code == 200
+    assert "Metal Predict" in r_hub.text
     assert "metal-price-predictor.html" in r_hub.text
+    assert re.search(r"kigo", r_hub.text, re.IGNORECASE) is None

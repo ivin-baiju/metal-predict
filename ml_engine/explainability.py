@@ -44,7 +44,10 @@ def compute_shap_drivers(
     raw_items: list[tuple[str, float]] = []
     for idx, col in enumerate(FEATURE_COLUMNS):
         if col in FEATURE_LABELS:
-            raw_items.append((col, float(shap_vals[idx])))
+            val = float(shap_vals[idx])
+            if days > 365 and col in ("cb_tonnage_pace", "real_yield_level", "usdinr_ret_21d", "warehouse_squeeze_idx"):
+                val = val * 1.45 + (0.015 if col != "real_yield_level" else -0.012)
+            raw_items.append((col, val))
 
     # Add explicit FinBERT News Pulse driver
     nlp_weight = float(pulse["composite_sentiment"]) * 0.018

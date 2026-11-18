@@ -60,6 +60,8 @@ class MultiHorizonSuite:
         m_1y = self.mid_models[m].predict_trajectory(row, spot, max_days=365, anchor_date=anchor_ts)
         l_5y = self.long_models[m].simulate_monte_carlo(row, spot, max_days=1825, n_sims=1000, anchor_date=anchor_ts)
 
+        regimes_base = self.mid_models[m].compute_regime_probabilities(row)
+
         return {
             "1M": {
                 "horizon": "1M",
@@ -67,6 +69,7 @@ class MultiHorizonSuite:
                 "tier": "Tier 1: Short-Term TFT/XGBoost Matrix",
                 "series": s_1m,
                 "terminal": s_1m[-1],
+                "regime_probabilities": regimes_base,
                 "metrics": self.walk_forward_metrics[m]["1M"],
             },
             "3M": {
@@ -75,6 +78,7 @@ class MultiHorizonSuite:
                 "tier": "Tier 1: Short-Term TFT/XGBoost Matrix",
                 "series": s_3m,
                 "terminal": s_3m[-1],
+                "regime_probabilities": regimes_base,
                 "metrics": self.walk_forward_metrics[m]["3M"],
             },
             "6M": {
@@ -104,6 +108,7 @@ class MultiHorizonSuite:
                 "sample_paths": l_5y["sample_paths"],
                 "annualized_drift_pct": l_5y["annualized_drift_pct"],
                 "annualized_volatility_pct": l_5y["annualized_volatility_pct"],
+                "regime_probabilities": regimes_base,
                 "metrics": self.walk_forward_metrics[m]["5Y"],
             },
         }

@@ -134,6 +134,12 @@ def simulate_macro_shock(req: MacroShockRequest) -> dict:
         gst_pct=req.gst_pct,
     )
 
+    # Compute stressed macro regime probabilities
+    stressed_row = suite.latest_rows[m].copy()
+    stressed_row["real_yield_level"] = float(stressed_row.get("real_yield_level", 1.85)) + (req.real_yield_delta_bps / 100.0) - (req.rate_cuts_bps / 200.0)
+    stressed_row["ret_63d"] = float(stressed_row.get("ret_63d", 0.03)) + total_annual_impulse * 0.35
+    stressed_regimes = suite.mid_models[m].compute_regime_probabilities(stressed_row)
+
     return {
         "metal": m,
         "horizon": h_key,
@@ -146,4 +152,5 @@ def simulate_macro_shock(req: MacroShockRequest) -> dict:
         "stressed_parity": spot_stressed_parity,
         "projected_target_parity": target_stressed_parity,
         "stressed_gtt_zone": gtt,
+        "stressed_regime_probabilities": stressed_regimes,
     }
