@@ -99,6 +99,30 @@ body.mp-body {
   -webkit-font-smoothing: antialiased;
 }
 
+::selection {
+  background: rgba(219, 91, 127, 0.16);
+  color: var(--ink);
+}
+
+img,
+svg,
+canvas,
+button,
+label,
+input[type="range"],
+.km-control-ribbon,
+.km-slider-group,
+.km-fold-list,
+.mp-header {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+img::selection,
+svg::selection {
+  background: transparent;
+}
+
 a {
   color: inherit;
   text-decoration: none;
@@ -388,34 +412,53 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1.5rem;
-  min-height: 82px;
-  padding-block: 0.65rem;
+  gap: 1.15rem;
+  min-height: 78px;
+  padding-block: 0.75rem;
 }
 .mp-header__logo {
   display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.65rem;
   flex-shrink: 0;
 }
 .mp-header__nav {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: clamp(1rem, 1.8vw, 1.85rem);
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  gap: clamp(0.95rem, 1.45vw, 1.65rem);
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 0 0 0.75rem;
 }
 .mp-nav-link {
   position: relative;
   font-family: "Poppins", sans-serif;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   font-weight: 500;
   color: var(--ink);
-  padding: 0.25rem 0;
+  padding: 0.3rem 0;
   display: inline-flex;
   align-items: center;
+  white-space: nowrap;
+}
+@media (max-width: 1120px) {
+  .mp-header__inner {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding-block: 0.85rem;
+    gap: 0.75rem 1.25rem;
+  }
+  .mp-header__nav {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.65rem 1.35rem;
+    padding-top: 0.35rem;
+    border-top: 1px solid var(--rule);
+  }
 }
 .mp-nav-link::before {
   content: "";
@@ -773,7 +816,8 @@ button {
   line-height: 1;
 }
 .km-metal-tab.is-active .km-metal-tab__kanji {
-  color: var(--sakura);
+  color: #ff85a6;
+  text-shadow: 0 0 12px rgba(255, 133, 166, 0.35);
 }
 .km-metal-tab__meta {
   display: flex;
@@ -1297,6 +1341,17 @@ button {
 /* ==========================================================================
    10. Sections, Ukiyo-e Character Stage, Dragon, Kitsune Fox & Cloudscape
    ========================================================================== */
+.km-section,
+#kmDeskSection,
+#kmAnyDaySection,
+#kmStressSection,
+#kmSipSection,
+#kmBacktestSection,
+#kmPulseSection,
+#kmFaqSection {
+  scroll-margin-top: 112px;
+}
+
 .km-section {
   margin-top: clamp(3rem, 5.5vw, 4.75rem);
   padding-top: clamp(2.25rem, 4.5vw, 3.75rem);
@@ -1572,6 +1627,11 @@ button {
   background: var(--ink);
   color: var(--paper);
 }
+.mp-sip-stat--highlight span {
+  color: #ff85a6;
+  opacity: 1 !important;
+  font-weight: 600;
+}
 .mp-sip-stat span {
   display: block;
   font-family: "Kanit", sans-serif;
@@ -1680,8 +1740,15 @@ button {
 }
 .km-fold-btn.is-active {
   background: var(--ink);
-  color: var(--paper);
-  border-left: 4px solid var(--sakura);
+  color: #ffffff;
+  border-left: 4px solid #ff85a6;
+}
+.km-fold-btn.is-active .km-fold-btn__title {
+  color: #ffffff;
+}
+.km-fold-btn.is-active .km-fold-btn__meta {
+  color: #efece8;
+  opacity: 0.96;
 }
 .km-fold-btn__title {
   font-family: "Kanit", sans-serif;

@@ -1210,6 +1210,9 @@
       const vEl = document.getElementById(valId);
       if (!el) return;
       el.addEventListener("input", () => {
+        if (window.getSelection) {
+          window.getSelection().removeAllRanges();
+        }
         state[key] = Number(el.value);
         if (vEl) vEl.textContent = fmt(state[key]);
         scheduleMacroShockSimulation();
