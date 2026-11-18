@@ -365,6 +365,13 @@ def load_trained_suite(
     db_path: str = DEFAULT_DB_PATH,
 ) -> MultiHorizonSuite:
     artifact_path = os.path.join(registry_dir, "multi_horizon_suite.joblib")
-    if not os.path.exists(artifact_path):
+    if not os.path.exists(artifact_path) or not os.path.exists(db_path):
         train_and_register_all(db_path=db_path, registry_dir=registry_dir)
-    return joblib.load(artifact_path)
+    try:
+        suite = joblib.load(artifact_path)
+        # Smoke-test one prediction to ensure cross-platform pickle compatibility
+        _ = suite.short_models["gold"]
+        return suite
+    except Exception:
+        train_and_register_all(db_path=db_path, registry_dir=registry_dir)
+        return joblib.load(artifact_path)
