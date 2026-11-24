@@ -1,8 +1,8 @@
 {
   "status": "ok",
   "engine": "Metal Predict Nightly Auto-Refresh Pipeline",
-  "last_refreshed_utc": "2026-11-21T00:07:21Z",
-  "last_refreshed_ist": "2026-11-21 05:37:21 IST",
+  "last_refreshed_utc": "2026-11-24T04:02:28Z",
+  "last_refreshed_ist": "2026-11-24 09:32:28 IST",
   "nightly_cron_schedule": "30 18 * * 1-5 (00:00 IST Tue\u2013Sat)",
   "metals": {
     "gold": {
